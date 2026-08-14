@@ -1,0 +1,12 @@
+{
+  "name": "ポス活ログ",
+  "short_name": "ポス活ログ",
+  "description": "品川区のポスティング活動を記録・分析する個人向けPWA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#1557a6",
+  "lang": "ja",
+  "icons": [{"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

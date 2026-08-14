@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1557a6">
+  <meta name="description" content="品川区のポスティング活動を記録・分析する個人向けPWA">
+  <title>ポス活ログ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Posting activity tracker</p>
+      <h1>ポス活ログ</h1>
+    </div>
+    <div class="account-area">
+      <span id="syncBadge" class="status-badge">端末内保存</span>
+      <button id="loginButton" class="button button-quiet" type="button">Googleでログイン</button>
+    </div>
+  </header>
+
+  <nav class="primary-nav" aria-label="メインメニュー">
+    <button data-view="home" class="nav-item active" type="button">ホーム</button>
+    <button data-view="record" class="nav-item" type="button">記録</button>
+    <button data-view="history" class="nav-item" type="button">履歴</button>
+    <button data-view="map" class="nav-item" type="button">地図</button>
+    <button data-view="apartments" class="nav-item" type="button">マンション</button>
+    <button data-view="analysis" class="nav-item" type="button">分析</button>
+    <button data-view="settings" class="nav-item" type="button">設定</button>
+  </nav>
+
+  <main id="main" class="app-main">
+    <section id="view-home" class="view active" aria-labelledby="homeTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">Dashboard</p><h2 id="homeTitle">今月の活動</h2></div>
+        <p id="todayLabel" class="muted"></p>
+      </div>
+      <div class="action-grid">
+        <button id="quickStartButton" class="button button-primary action-button" type="button">活動を開始</button>
+        <button data-open-record class="button button-secondary action-button" type="button">手動で入力</button>
+        <button data-open-import class="button button-secondary action-button" type="button">CSVを取り込む</button>
+      </div>
+      <div id="homeStats" class="stat-grid"></div>
+      <section class="panel goal-panel">
+        <div class="panel-heading"><h3>月間目標</h3><button data-view-jump="settings" class="text-button" type="button">目標を設定</button></div>
+        <div id="goalSummary"></div>
+      </section>
+      <div class="two-column">
+        <section class="panel"><div class="panel-heading"><h3>最近の活動</h3><button data-view-jump="history" class="text-button" type="button">すべて見る</button></div><div id="recentActivities"></div></section>
+        <section class="panel"><div class="panel-heading"><h3>確認が必要</h3><button data-view-jump="apartments" class="text-button" type="button">マンション一覧</button></div><div id="attentionList"></div></section>
+      </div>
+    </section>
+
+    <section id="view-record" class="view" aria-labelledby="recordTitle">
+      <div class="section-heading"><div><p class="eyebrow">New activity</p><h2 id="recordTitle">活動を記録</h2></div></div>
+      <section id="timerPanel" class="panel timer-panel">
+        <div><span id="timerStatus" class="status-badge">停止中</span><strong id="timerDisplay">00:00:00</strong><p id="timerStartedAt" class="muted">開始ボタンを押すと計測します</p></div>
+        <button id="timerToggle" class="button button-primary" type="button">開始</button>
+      </section>
+      <form id="activityForm" class="form-layout">
+        <input id="activityId" type="hidden">
+        <section class="panel form-section">
+          <h3>基本情報</h3>
+          <div class="form-grid">
+            <label>活動日<input id="activityDate" name="date" type="date" required></label>
+            <label>開始時刻<input id="startTime" name="startTime" type="time" required></label>
+            <label>終了時刻<input id="endTime" name="endTime" type="time" required></label>
+            <label>参加人数<input id="peopleCount" name="peopleCount" type="number" min="1" value="1" required></label>
+          </div>
+          <label>担当者（複数は読点区切り）<input id="workers" name="workers" type="text" placeholder="例：本人、Aさん"></label>
+          <label>メモ<textarea id="activityMemo" name="memo" rows="3" placeholder="引き継ぎ事項や現場の状況"></textarea></label>
+        </section>
+        <section class="panel form-section">
+          <div class="panel-heading"><h3>配布物</h3><button id="addMaterialRow" class="button button-small" type="button">配布物を追加</button></div>
+          <div id="materialRows"></div>
+        </section>
+        <section class="panel form-section">
+          <div class="panel-heading"><h3>町丁目別内訳</h3><button id="addAreaRow" class="button button-small" type="button">町丁目を追加</button></div>
+          <div id="areaRows"></div>
+        </section>
+        <div id="activityWarnings" class="notice warning" hidden></div>
+        <div class="form-actions"><button id="resetActivity" class="button button-quiet" type="button">入力をクリア</button><button class="button button-primary" type="submit">活動を保存</button></div>
+      </form>
+    </section>
+
+    <section id="view-history" class="view" aria-labelledby="historyTitle">
+      <div class="section-heading"><div><p class="eyebrow">History</p><h2 id="historyTitle">活動履歴</h2></div><button id="shareLatest" class="button button-secondary" type="button">最新記録を共有</button></div>
+      <section class="panel filters"><label>検索<input id="historySearch" type="search" placeholder="町丁目・配布物・担当者"></label><label>期間<select id="historyPeriod"><option value="all">全期間</option><option value="month">今月</option><option value="year">今年</option></select></label></section>
+      <div id="historyList" class="card-list"></div>
+    </section>
+
+    <section id="view-map" class="view" aria-labelledby="mapTitle">
+      <div class="section-heading"><div><p class="eyebrow">Shinagawa map</p><h2 id="mapTitle">配布地図</h2></div><span id="demographicDate" class="status-badge"></span></div>
+      <section class="panel filters map-filters">
+        <label>地図表示<select id="mapMetric"><option value="base">人口・世帯数</option><option value="total">累計配布枚数</option><option value="rate">世帯数に対する配布率</option><option value="days">最終配布からの経過日数</option><option value="month">今月の配布状況</option><option value="status">未配布・配布中・完了</option></select></label>
+        <label>配布物<select id="mapMaterial"><option value="all">すべて</option></select></label>
+        <label>期間<select id="mapPeriod"><option value="all">全期間</option><option value="month">今月</option><option value="3months">過去3カ月</option><option value="year">今年</option></select></label>
+      </section>
+      <div class="map-layout"><div id="activityMap" class="map-canvas" aria-label="品川区町丁目地図"></div><aside id="mapDetail" class="panel map-detail"><h3>町丁目を選択</h3><p class="muted">境界または一覧を選ぶと詳細を表示します。</p></aside></div>
+      <p class="source-note">背景地図 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> ／ 人口・世帯数：品川区</p>
+    </section>
+
+    <section id="view-apartments" class="view" aria-labelledby="apartmentsTitle">
+      <div class="section-heading"><div><p class="eyebrow">Apartment list</p><h2 id="apartmentsTitle">マンション</h2></div><button id="newApartmentButton" class="button button-primary" type="button">物件を登録</button></div>
+      <section class="panel filters apartment-filters"><label>町丁目<select id="apartmentArea"><option value="all">すべて</option></select></label><label>配布可否<select id="apartmentStatus"><option value="all">すべて</option><option value="allowed">配布可</option><option value="conditional">条件付き</option><option value="prohibited">配布禁止</option><option value="unknown">未確認</option></select></label><label>最低戸数<input id="apartmentUnits" type="number" min="0" value="100"></label><label>並び順<select id="apartmentSort"><option value="units">戸数が多い順</option><option value="area">町丁目順</option><option value="old">確認日が古い順</option></select></label></section>
+      <div class="map-layout"><div id="apartmentMap" class="map-canvas"></div><div id="apartmentList" class="card-list compact-list"></div></div>
+    </section>
+
+    <section id="view-analysis" class="view" aria-labelledby="analysisTitle">
+      <div class="section-heading"><div><p class="eyebrow">Analysis</p><h2 id="analysisTitle">分析</h2></div><div class="button-row"><button id="shareAnalysisText" class="button button-secondary" type="button">テキスト共有</button><button id="shareAnalysisImage" class="button button-primary" type="button">画像で共有</button></div></div>
+      <section class="panel filters"><label>期間<select id="analysisPeriod"><option value="month">今月</option><option value="3months">過去3カ月</option><option value="year">今年</option><option value="all">全期間</option></select></label><label>配布物<select id="analysisMaterial"><option value="all">すべて</option></select></label></section>
+      <div id="analysisReport" class="report-card"><div id="analysisStats" class="stat-grid"></div><div class="chart-grid"><section class="panel"><h3>期間別配布枚数</h3><div id="trendChart" class="bar-chart"></div></section><section class="panel"><h3>町丁目別 上位5件</h3><div id="areaRanking"></div></section><section class="panel"><h3>配布物別</h3><div id="materialBreakdown"></div></section><section class="panel"><h3>担当者別</h3><div id="workerBreakdown"></div></section></div></div>
+    </section>
+
+    <section id="view-settings" class="view" aria-labelledby="settingsTitle">
+      <div class="section-heading"><div><p class="eyebrow">Settings</p><h2 id="settingsTitle">設定・データ管理</h2></div></div>
+      <div class="settings-grid">
+        <section class="panel form-section"><h3>月間目標</h3><label>全配布物の月間目標<input id="monthlyGoal" type="number" min="0" step="100" placeholder="30000"></label><button id="saveGoal" class="button button-primary" type="button">目標を保存</button></section>
+        <section class="panel form-section"><h3>配布物マスター</h3><div id="materialMaster"></div><div class="inline-form"><input id="newMaterialName" type="text" placeholder="配布物名"><button id="createMaterial" class="button button-secondary" type="button">追加</button></div></section>
+        <section id="csvSection" class="panel form-section"><h3>CSVインポート</h3><p class="muted">列を自動判定し、取り込み前に確認します。</p><input id="csvFile" type="file" accept=".csv,text/csv"><div id="importPreview"></div><button id="confirmImport" class="button button-primary" type="button" hidden>確認した内容を登録</button></section>
+        <section class="panel form-section"><h3>エクスポート</h3><p class="muted">活動記録、地域別内訳、配布物、担当者、マンション情報をCSVで保存します。</p><div class="button-row"><button id="exportActivities" class="button button-secondary" type="button">活動記録CSV</button><button id="exportApartments" class="button button-secondary" type="button">マンションCSV</button><button id="exportAll" class="button button-primary" type="button">すべて保存</button></div></section>
+        <section class="panel form-section"><h3>Google同期</h3><p id="firebaseStatus" class="muted">Firebaseは未設定です。現在は端末内に保存しています。</p><a class="button button-secondary" href="./docs/FIREBASE_SETUP.md">手動設定手順を見る</a></section>
+        <section class="panel danger-zone"><h3>アカウントとデータ</h3><p>削除前にCSVを保存してください。Googleアカウント自体は削除されません。</p><button id="deleteAccount" class="button button-danger" type="button">ポス活ログのデータを削除</button></section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="apartmentDialog">
+    <form id="apartmentForm" method="dialog" class="dialog-form">
+      <div class="panel-heading"><h2>マンション情報</h2><button class="icon-button" value="cancel" aria-label="閉じる">×</button></div>
+      <input id="apartmentId" type="hidden">
+      <div class="form-grid"><label>物件名<input id="apartmentName" required></label><label>総戸数<input id="apartmentUnitCount" type="number" min="1" required></label><label>町丁目<select id="apartmentTown" required></select></label><label>配布可否<select id="apartmentPostingStatus"><option value="unknown">未確認</option><option value="allowed">配布可</option><option value="conditional">条件付き</option><option value="prohibited">配布禁止</option></select></label><label>緯度<input id="apartmentLat" type="number" step="any"></label><label>経度<input id="apartmentLng" type="number" step="any"></label><label>最終確認日<input id="apartmentCheckedAt" type="date"></label><label>情報の確度<select id="apartmentConfidence"><option value="candidate">候補</option><option value="verified">確認済み</option><option value="review">要再確認</option></select></label></div>
+      <label>住所<input id="apartmentAddress"></label><label>条件・禁止理由<textarea id="apartmentReason" rows="2"></textarea></label><label>メモ<textarea id="apartmentMemo" rows="2"></textarea></label><label>参照元URL<input id="apartmentSource" type="url"></label>
+      <div class="form-actions"><button id="deleteApartment" class="button button-danger" type="button" hidden>削除</button><button class="button button-primary" value="default" type="submit">保存</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
