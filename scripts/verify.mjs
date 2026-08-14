@@ -24,6 +24,11 @@ for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地�
   if (!html.includes(label)) { console.error(`UI LABEL MISSING ${label}`); failed = true; }
 }
 
+const app = await readFile(path.join(root, "js/app.js"), "utf8");
+for (const feature of ["addCurrentLocationControl(activityMap)", "addCurrentLocationControl(apartmentMap)", 'map.on("locationfound"', 'map.on("locationerror"']) {
+  if (!app.includes(feature)) { console.error(`CURRENT LOCATION FEATURE MISSING ${feature}`); failed = true; }
+}
+
 const config = await readFile(path.join(root, "data/firebase-config.js"), "utf8");
 for (const field of ["apiKey", "authDomain", "projectId", "appId"]) {
   if (!new RegExp(`${field}:\\s*["'][^"']+["']`).test(config)) { console.error(`FIREBASE CONFIG MISSING ${field}`); failed = true; }

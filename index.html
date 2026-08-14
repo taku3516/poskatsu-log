@@ -108,7 +108,7 @@
     <section id="view-apartments" class="view" aria-labelledby="apartmentsTitle">
       <div class="section-heading"><div><p class="eyebrow">Apartment list</p><h2 id="apartmentsTitle">マンション</h2></div><button id="newApartmentButton" class="button button-primary" type="button">物件を登録</button></div>
       <section class="panel filters apartment-filters"><label>町丁目<select id="apartmentArea"><option value="all">すべて</option></select></label><label>配布可否<select id="apartmentStatus"><option value="all">すべて</option><option value="allowed">配布可</option><option value="conditional">条件付き</option><option value="prohibited">配布禁止</option><option value="unknown">未確認</option></select></label><label>最低戸数<input id="apartmentUnits" type="number" min="0" value="100"></label><label>並び順<select id="apartmentSort"><option value="units">戸数が多い順</option><option value="area">町丁目順</option><option value="old">確認日が古い順</option></select></label></section>
-      <div class="map-layout"><div id="apartmentMap" class="map-canvas"></div><div id="apartmentList" class="card-list compact-list"></div></div>
+      <div class="map-layout"><div id="apartmentMap" class="map-canvas" aria-label="マンション地図"></div><div id="apartmentList" class="card-list compact-list"></div></div>
     </section>
 
     <section id="view-analysis" class="view" aria-labelledby="analysisTitle">
