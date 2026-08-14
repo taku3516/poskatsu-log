@@ -25,7 +25,9 @@ for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地�
 }
 
 const config = await readFile(path.join(root, "data/firebase-config.js"), "utf8");
-if (/AIza[0-9A-Za-z_-]{20,}/.test(config)) { console.error("Firebase config should remain manual for this initial commit"); failed = true; }
+for (const field of ["apiKey", "authDomain", "projectId", "appId"]) {
+  if (!new RegExp(`${field}:\\s*["'][^"']+["']`).test(config)) { console.error(`FIREBASE CONFIG MISSING ${field}`); failed = true; }
+}
 
 if (failed) process.exit(1);
-console.log("verify: required files, JavaScript syntax, UI labels, and Firebase placeholder passed");
+console.log("verify: required files, JavaScript syntax, UI labels, and Firebase config passed");
