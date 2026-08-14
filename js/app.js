@@ -27,6 +27,72 @@ let timerInterval = null;
 let pendingImport = [];
 let toastTimer;
 
+function addCurrentLocationControl(map) {
+  let locationMarker;
+  let accuracyCircle;
+  let button;
+
+  const control = L.control({ position: "topright" });
+  control.onAdd = () => {
+    const container = L.DomUtil.create("div", "leaflet-bar current-location-control");
+    button = L.DomUtil.create("button", "current-location-button", container);
+    button.type = "button";
+    button.textContent = "◎ 現在地";
+    button.title = "現在地を地図に表示";
+    button.setAttribute("aria-label", "現在地を地図に表示");
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+    L.DomEvent.on(button, "click", () => {
+      button.disabled = true;
+      button.textContent = "取得中…";
+      button.setAttribute("aria-busy", "true");
+      map._poskatsuLocationRequested = true;
+      map.locate({ enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 });
+    });
+    return container;
+  };
+  control.addTo(map);
+
+  map.on("locationfound", (event) => {
+    if (accuracyCircle) accuracyCircle.remove();
+    if (locationMarker) locationMarker.remove();
+    accuracyCircle = L.circle(event.latlng, {
+      radius: event.accuracy,
+      color: "#1557a6",
+      weight: 1,
+      fillColor: "#4c86c5",
+      fillOpacity: .12,
+      interactive: false
+    }).addTo(map);
+    locationMarker = L.circleMarker(event.latlng, {
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: "#1557a6",
+      fillOpacity: 1
+    }).bindTooltip("現在地").addTo(map);
+    map.setView(event.latlng, Math.max(map.getZoom(), 16));
+    button.disabled = false;
+    button.textContent = "◎ 現在地";
+    button.removeAttribute("aria-busy");
+    button.setAttribute("aria-pressed", "true");
+    toast("現在地を表示しました");
+  });
+
+  map.on("locationerror", (event) => {
+    map._poskatsuLocationRequested = false;
+    button.disabled = false;
+    button.textContent = "◎ 現在地";
+    button.removeAttribute("aria-busy");
+    const messages = {
+      1: "位置情報の利用が許可されていません。端末やブラウザの設定を確認してください。",
+      2: "現在地を取得できませんでした。電波状況を確認して再度お試しください。",
+      3: "現在地の取得がタイムアウトしました。再度お試しください。"
+    };
+    toast(messages[event.code] || "現在地を取得できませんでした。");
+  });
+}
+
 function toast(message) {
   const element = $("#toast");
   element.textContent = message;
@@ -354,6 +420,7 @@ async function renderActivityMap() {
   if (!activityMap) {
     activityMap = L.map("activityMap", { zoomControl: true }).setView([35.609, 139.73], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(activityMap);
+    addCurrentLocationControl(activityMap);
   }
   activityMap.invalidateSize();
   if (townLayer) townLayer.remove();
@@ -367,7 +434,7 @@ async function renderActivityMap() {
       layer.on("click", () => renderMapDetail(name));
     }
   }).addTo(activityMap);
-  activityMap.fitBounds(townLayer.getBounds(), { padding: [8, 8] });
+  if (!activityMap._poskatsuLocationRequested) activityMap.fitBounds(townLayer.getBounds(), { padding: [8, 8] });
 }
 
 const POSTING_LABELS = { allowed: "配布可", conditional: "条件付き", prohibited: "配布禁止", unknown: "未確認" };
@@ -391,6 +458,7 @@ function renderApartmentMap() {
   if (!apartmentMap) {
     apartmentMap = L.map("apartmentMap").setView([35.609, 139.73], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(apartmentMap);
+    addCurrentLocationControl(apartmentMap);
     apartmentMarkers = L.layerGroup().addTo(apartmentMap);
   }
   apartmentMap.invalidateSize(); apartmentMarkers.clearLayers();

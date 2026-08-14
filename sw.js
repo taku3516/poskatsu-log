@@ -1,4 +1,4 @@
-const CACHE_NAME = "poskatsu-log-v2";
+const CACHE_NAME = "poskatsu-log-v3";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
