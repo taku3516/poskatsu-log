@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { INITIAL_APARTMENTS } from "../js/data.js";
 
 const root = path.resolve(import.meta.dirname, "..");
 const required = ["index.html", "css/app.css", "js/app.js", "js/store.js", "js/firebase-adapter.js", "data/demographics.js", "manifest.webmanifest", "sw.js", "firebase/firestore.rules", "docs/FIREBASE_SETUP.md"];
@@ -27,6 +28,16 @@ for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地�
 const app = await readFile(path.join(root, "js/app.js"), "utf8");
 for (const feature of ["addCurrentLocationControl(activityMap)", "addCurrentLocationControl(apartmentMap)", 'map.on("locationfound"', 'map.on("locationerror"']) {
   if (!app.includes(feature)) { console.error(`CURRENT LOCATION FEATURE MISSING ${feature}`); failed = true; }
+}
+
+const apartmentIds = new Set(INITIAL_APARTMENTS.map((item) => item.id));
+if (INITIAL_APARTMENTS.length < 40) { console.error("INITIAL APARTMENTS MUST INCLUDE AT LEAST 40 CANDIDATES"); failed = true; }
+if (apartmentIds.size !== INITIAL_APARTMENTS.length) { console.error("INITIAL APARTMENT IDS MUST BE UNIQUE"); failed = true; }
+for (const apartment of INITIAL_APARTMENTS) {
+  if (!apartment.name || !apartment.address || !apartment.area || apartment.units < 100 || !apartment.sourceUrl) {
+    console.error(`INVALID INITIAL APARTMENT ${apartment.id}`);
+    failed = true;
+  }
 }
 
 const config = await readFile(path.join(root, "data/firebase-config.js"), "utf8");
