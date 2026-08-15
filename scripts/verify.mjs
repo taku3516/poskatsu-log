@@ -38,8 +38,12 @@ const apartmentIds = new Set(INITIAL_APARTMENTS.map((item) => item.id));
 if (INITIAL_APARTMENTS.length < 40) { console.error("INITIAL APARTMENTS MUST INCLUDE AT LEAST 40 CANDIDATES"); failed = true; }
 if (apartmentIds.size !== INITIAL_APARTMENTS.length) { console.error("INITIAL APARTMENT IDS MUST BE UNIQUE"); failed = true; }
 for (const apartment of INITIAL_APARTMENTS) {
-  if (!apartment.name || !apartment.address || !apartment.area || apartment.units < 100 || !apartment.sourceUrl) {
+  if (!apartment.name || !apartment.address || !apartment.area || apartment.units < 100 || !apartment.sourceUrl || !Number.isFinite(apartment.lat) || !Number.isFinite(apartment.lng)) {
     console.error(`INVALID INITIAL APARTMENT ${apartment.id}`);
+    failed = true;
+  }
+  if (apartment.lat < 35.57 || apartment.lat > 35.65 || apartment.lng < 139.68 || apartment.lng > 139.78) {
+    console.error(`INITIAL APARTMENT OUTSIDE SHINAGAWA MAP BOUNDS ${apartment.id}`);
     failed = true;
   }
 }
