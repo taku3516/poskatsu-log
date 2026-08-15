@@ -1,4 +1,4 @@
-import { createInitialState } from "./data.js";
+import { APARTMENT_BASELINE_VERSION, INITIAL_APARTMENTS, createInitialState } from "./data.js";
 
 const STORAGE_PREFIX = "poskatsu_log_state_v1";
 let storageKey = STORAGE_PREFIX;
@@ -9,11 +9,27 @@ let remoteSave = null;
 function loadState(key) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key));
-    if (parsed && Array.isArray(parsed.activities)) return { ...createInitialState(), ...parsed };
+    if (parsed && Array.isArray(parsed.activities)) return migrateState(parsed);
   } catch (error) {
     console.warn("Local state could not be read", error);
   }
   return createInitialState();
+}
+
+function migrateState(savedState) {
+  const deletedIds = new Set(savedState.deletedInitialApartmentIds || []);
+  const savedApartments = Array.isArray(savedState.apartments) ? savedState.apartments : [];
+  const apartmentsById = new Map(savedApartments.map((item) => [item.id, item]));
+  for (const candidate of INITIAL_APARTMENTS) {
+    if (!apartmentsById.has(candidate.id) && !deletedIds.has(candidate.id)) apartmentsById.set(candidate.id, structuredClone(candidate));
+  }
+  return {
+    ...createInitialState(),
+    ...savedState,
+    apartments: [...apartmentsById.values()],
+    apartmentBaselineVersion: APARTMENT_BASELINE_VERSION,
+    deletedInitialApartmentIds: [...deletedIds]
+  };
 }
 
 function persist(notifyRemote = true) {
@@ -35,7 +51,7 @@ export const store = {
     return hasStoredState;
   },
   replace(nextState, { remote = false } = {}) {
-    state = { ...createInitialState(), ...structuredClone(nextState) };
+    state = migrateState(structuredClone(nextState));
     persist(!remote);
   },
   saveActivity(activity) {
@@ -60,7 +76,11 @@ export const store = {
     else state.apartments.push(apartment);
     persist();
   },
-  deleteApartment(id) { state.apartments = state.apartments.filter((item) => item.id !== id); persist(); },
+  deleteApartment(id) {
+    state.apartments = state.apartments.filter((item) => item.id !== id);
+    if (INITIAL_APARTMENTS.some((item) => item.id === id) && !state.deletedInitialApartmentIds.includes(id)) state.deletedInitialApartmentIds.push(id);
+    persist();
+  },
   saveGoal(month, value) { state.goals[month] = Number(value) || 0; persist(); },
   saveImportMapping(signature, mapping) { state.importMappings[signature] = mapping; persist(); },
   clear() { state = createInitialState(); localStorage.removeItem(storageKey); listeners.forEach((listener) => listener(state)); },
