@@ -56,7 +56,7 @@ function watchRemote(user) {
   remoteUnsubscribe = modules.onSnapshot(userDoc(user.uid), (snapshot) => {
     if (!snapshot.exists() || snapshot.metadata.hasPendingWrites || currentUser?.uid !== user.uid) return;
     const remote = snapshot.data().state;
-    if (remote && String(remote.updatedAt || "") > String(store.get().updatedAt || "")) store.replace(remote, { remote: true });
+    if (remote && String(remote.updatedAt || "") > String(store.export().updatedAt || "")) store.replace(remote, { remote: true });
   }, (error) => {
     console.error(error);
     window.dispatchEvent(new CustomEvent("poskatsu-sync", { detail: { status: "error", error } }));

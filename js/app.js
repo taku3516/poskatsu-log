@@ -152,6 +152,7 @@ function statCard(label, value, suffix = "") {
 }
 
 function renderHome() {
+  $("#homeTitle").textContent = `${store.getActiveAccount().name}の今月の活動`;
   const activities = filterActivities("month");
   const total = activities.reduce((sum, activity) => sum + activityTotal(activity), 0);
   const minutes = activities.reduce((sum, activity) => sum + activityMinutes(activity), 0);
@@ -635,6 +636,11 @@ function confirmImport() {
 function renderSettings() {
   $("#monthlyGoal").value = store.get().goals[monthKey()] || "";
   $("#materialMaster").innerHTML = store.get().materials.map((item) => `<div class="list-row"><span>${escapeHtml(item.name)}</span><button class="text-button" data-toggle-material="${escapeHtml(item.id)}" type="button">${item.active === false ? "表示する" : "非表示"}</button></div>`).join("");
+  const accounts = store.getAccounts();
+  const activeId = store.getActiveAccount().id;
+  $("#accountSwitcher").innerHTML = accounts.map((account) => `<option value="${escapeHtml(account.id)}">${escapeHtml(account.name)}</option>`).join("");
+  $("#accountSwitcher").value = activeId;
+  $("#accountList").innerHTML = accounts.map((account) => `<div class="account-row"><input value="${escapeHtml(account.name)}" maxlength="60" aria-label="${escapeHtml(account.name)}の名称" data-account-name="${escapeHtml(account.id)}"><button class="button button-small" data-rename-account="${escapeHtml(account.id)}" type="button">名称変更</button><button class="button button-small button-danger" data-delete-account="${escapeHtml(account.id)}" type="button" ${accounts.length === 1 ? "disabled" : ""}>削除</button>${account.id === activeId ? '<span class="account-row-current">現在使用中</span>' : ""}</div>`).join("");
 }
 
 function renderAll() {
@@ -652,7 +658,26 @@ function bindEvents() {
   $("#timerToggle").addEventListener("click", () => timerStarted ? stopTimer() : startTimer());
   $("#activityForm").addEventListener("submit", saveActivity); $("#resetActivity").addEventListener("click", resetActivityForm);
   $("#addMaterialRow").addEventListener("click", () => addMaterialRow()); $("#addAreaRow").addEventListener("click", () => addAreaRow());
-  document.addEventListener("click", (event) => { const remove = event.target.closest("[data-remove-row]"); if (remove) remove.closest(".repeat-row").remove(); const edit = event.target.closest("[data-edit-activity]"); if (edit) editActivity(edit.dataset.editActivity); const share = event.target.closest("[data-share-activity]"); if (share) { const item = store.get().activities.find((activity) => activity.id === share.dataset.shareActivity); if (item) shareText(activityShareText(item)); } const deletion = event.target.closest("[data-delete-activity]"); if (deletion && confirm("この活動記録を削除しますか？")) store.deleteActivity(deletion.dataset.deleteActivity); const editApartmentButton = event.target.closest("[data-edit-apartment]"); if (editApartmentButton) openApartmentDialog(editApartmentButton.dataset.editApartment); const toggle = event.target.closest("[data-toggle-material]"); if (toggle) { const item = store.get().materials.find((material) => material.id === toggle.dataset.toggleMaterial); store.saveMaterial({ ...item, active: item.active === false }); } });
+  document.addEventListener("click", (event) => {
+    const remove = event.target.closest("[data-remove-row]"); if (remove) remove.closest(".repeat-row").remove();
+    const edit = event.target.closest("[data-edit-activity]"); if (edit) editActivity(edit.dataset.editActivity);
+    const share = event.target.closest("[data-share-activity]"); if (share) { const item = store.get().activities.find((activity) => activity.id === share.dataset.shareActivity); if (item) shareText(activityShareText(item)); }
+    const deletion = event.target.closest("[data-delete-activity]"); if (deletion && confirm("この活動記録を削除しますか？")) store.deleteActivity(deletion.dataset.deleteActivity);
+    const editApartmentButton = event.target.closest("[data-edit-apartment]"); if (editApartmentButton) openApartmentDialog(editApartmentButton.dataset.editApartment);
+    const toggle = event.target.closest("[data-toggle-material]"); if (toggle) { const item = store.get().materials.find((material) => material.id === toggle.dataset.toggleMaterial); store.saveMaterial({ ...item, active: item.active === false }); }
+    const renameAccount = event.target.closest("[data-rename-account]");
+    if (renameAccount) {
+      const input = $(`[data-account-name="${CSS.escape(renameAccount.dataset.renameAccount)}"]`);
+      try { store.renameAccount(renameAccount.dataset.renameAccount, input.value); toast("活動アカウント名を変更しました"); } catch (error) { alert(error.message); }
+    }
+    const deleteAccount = event.target.closest("[data-delete-account]");
+    if (deleteAccount) {
+      const account = store.getAccounts().find((item) => item.id === deleteAccount.dataset.deleteAccount);
+      const confirmation = prompt(`「${account.name}」と、その中の活動記録をすべて削除します。\n削除するには活動アカウント名を入力してください。`);
+      if (confirmation === account.name) { try { store.deleteAccount(account.id); resetActivityForm(); toast("活動アカウントを削除しました"); } catch (error) { alert(error.message); } }
+      else if (confirmation !== null) alert("活動アカウント名が一致しません。");
+    }
+  });
   $("#historySearch").addEventListener("input", renderHistory); $("#historyPeriod").addEventListener("change", renderHistory);
   ["#mapMetric", "#mapMaterial", "#mapPeriod"].forEach((selector) => $(selector).addEventListener("change", renderActivityMap));
   ["#apartmentArea", "#apartmentStatus", "#apartmentUnits", "#apartmentSort"].forEach((selector) => $(selector).addEventListener("input", () => { renderApartments(); renderApartmentMap(); }));
@@ -663,10 +688,12 @@ function bindEvents() {
   $("#shareLatest").addEventListener("click", () => { const item = store.get().activities[0]; if (item) shareText(activityShareText(item)); else toast("共有できる活動記録がありません"); });
   $("#saveGoal").addEventListener("click", () => { store.saveGoal(monthKey(), $("#monthlyGoal").value); toast("月間目標を保存しました"); });
   $("#createMaterial").addEventListener("click", () => { const name = $("#newMaterialName").value.trim(); if (!name) return; store.saveMaterial({ id: uid("material"), name, active: true }); $("#newMaterialName").value = ""; });
+  $("#accountSwitcher").addEventListener("change", (event) => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを切り替えられません。"); event.target.value = store.getActiveAccount().id; return; } store.switchAccount(event.target.value); resetActivityForm(); pendingImport = []; toast(`${store.getActiveAccount().name}に切り替えました`); });
+  $("#createAccount").addEventListener("click", () => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを追加できません。"); return; } try { store.createAccount($("#newAccountName").value); $("#newAccountName").value = ""; resetActivityForm(); pendingImport = []; toast("活動アカウントを追加しました"); } catch (error) { alert(error.message); } });
   $("#csvFile").addEventListener("change", (event) => { if (event.target.files[0]) previewCsv(event.target.files[0]); }); $("#confirmImport").addEventListener("click", confirmImport);
   $("#exportActivities").addEventListener("click", exportActivities); $("#exportApartments").addEventListener("click", exportApartments); $("#exportAll").addEventListener("click", exportAllCsv);
   $("#loginButton").addEventListener("click", async () => { try { if (firebaseAdapter.user()) await firebaseAdapter.signOut(); else await firebaseAdapter.signIn(); } catch (error) { alert(error.message); } });
-  $("#deleteAccount").addEventListener("click", async () => { const confirmation = prompt("削除するには「削除」と入力してください。\n先にCSVを保存することをおすすめします。"); if (confirmation !== "削除") return; try { const result = await firebaseAdapter.deleteAccount(); toast("ポス活ログのデータを削除しました"); if (result?.reload) setTimeout(() => window.location.reload(), 700); } catch (error) { alert(`削除できませんでした。再ログイン後にお試しください。\n${error.message}`); } });
+  $("#deleteGoogleAccountData").addEventListener("click", async () => { const confirmation = prompt("全活動アカウントを削除するには「全削除」と入力してください。\n先に各アカウントのCSVを保存することをおすすめします。"); if (confirmation !== "全削除") return; try { const result = await firebaseAdapter.deleteAccount(); toast("ポス活ログの全データを削除しました"); if (result?.reload) setTimeout(() => window.location.reload(), 700); } catch (error) { alert(`削除できませんでした。再ログイン後にお試しください。\n${error.message}`); } });
 }
 
 async function init() {

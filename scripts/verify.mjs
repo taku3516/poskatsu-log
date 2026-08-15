@@ -21,7 +21,7 @@ for (const directory of ["js", "data", "scripts"]) {
 }
 
 const html = await readFile(path.join(root, "index.html"), "utf8");
-for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地図", "マンション", "分析", "設定・データ管理"]) {
+for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地図", "マンション", "分析", "設定・データ管理", "活動アカウント"]) {
   if (!html.includes(label)) { console.error(`UI LABEL MISSING ${label}`); failed = true; }
 }
 if (html.includes("手動設定手順を見る")) { console.error("MANUAL FIREBASE SETUP LINK MUST NOT BE SHOWN"); failed = true; }
@@ -32,6 +32,11 @@ if (firebaseAdapter.includes("設定画面の手順")) { console.error("HIDDEN F
 const app = await readFile(path.join(root, "js/app.js"), "utf8");
 for (const feature of ["addCurrentLocationControl(activityMap)", "addCurrentLocationControl(apartmentMap)", 'map.on("locationfound"', 'map.on("locationerror"']) {
   if (!app.includes(feature)) { console.error(`CURRENT LOCATION FEATURE MISSING ${feature}`); failed = true; }
+}
+
+const store = await readFile(path.join(root, "js/store.js"), "utf8");
+for (const feature of ["createAccount(name)", "switchAccount(id)", "renameAccount(id, name)", "deleteAccount(id)", "accountStates"]) {
+  if (!store.includes(feature)) { console.error(`ACTIVITY ACCOUNT FEATURE MISSING ${feature}`); failed = true; }
 }
 
 const apartmentIds = new Set(INITIAL_APARTMENTS.map((item) => item.id));
