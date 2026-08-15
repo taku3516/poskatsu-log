@@ -89,15 +89,29 @@ export const firebaseAdapter = {
     return { configured: true };
   },
   async signIn() {
-    if (!firebaseConfigured()) throw new Error("Firebaseが未設定です。設定画面の手順を確認してください。");
+    if (!firebaseConfigured()) throw new Error("Firebaseが未設定です。");
     const sdk = await loadModules();
     return sdk.signInWithPopup(auth, new sdk.GoogleAuthProvider());
   },
   async signOut() { if (auth) await modules.signOut(auth); },
   async deleteAccount() {
     if (!currentUser) { store.clear(); return; }
-    await modules.deleteDoc(userDoc(currentUser.uid));
+    const user = currentUser;
+    clearTimeout(remoteTimer);
+    remoteTimer = null;
+    if (remoteUnsubscribe) remoteUnsubscribe();
+    remoteUnsubscribe = null;
+    await modules.deleteDoc(userDoc(user.uid));
     store.clear();
-    await modules.deleteUser(currentUser);
+    await modules.terminate(db);
+    try {
+      await modules.clearIndexedDbPersistence(db);
+    } catch (error) {
+      throw new Error("ローカルキャッシュを削除できませんでした。他のポス活ログのタブを閉じ、ページを再読み込みしてからもう一度お試しください。", { cause: error });
+    }
+    await modules.deleteUser(user);
+    currentUser = null;
+    db = null;
+    return { reload: true };
   }
 };

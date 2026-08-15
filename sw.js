@@ -1,4 +1,4 @@
-const CACHE_NAME = "poskatsu-log-v4";
+const CACHE_NAME = "poskatsu-log-v5";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   "./js/store.js",
   "./js/data.js",
   "./js/firebase-adapter.js",
+  "./js/security.js",
   "./data/demographics.js",
   "./data/firebase-config.js",
   "./manifest.webmanifest",
