@@ -1,6 +1,7 @@
 import { store } from "./store.js";
 import { firebaseAdapter } from "./firebase-adapter.js";
 import { DEMOGRAPHICS, DEMOGRAPHICS_AS_OF, DEMOGRAPHICS_SOURCE, TOWN_TOPOJSON_URL, BOUNDARY_CREDIT } from "./data.js";
+import { createImportedActivityIdentity, csvEscape, escapeHtml } from "./security.js";
 
 const yen = new Intl.NumberFormat("ja-JP");
 const dateFormat = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric" });
@@ -9,7 +10,6 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const uid = (prefix = "id") => `${prefix}-${crypto.randomUUID()}`;
 const today = () => new Date().toISOString().slice(0, 10);
 const monthKey = (value = new Date()) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
-const escapeHtml = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const arabicName = (name = "") => String(name).normalize("NFKC").replace(/[一二三四五六七八九十]+丁目/g, (match) => {
   const table = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
   const text = match.replace("丁目", "");
@@ -175,7 +175,7 @@ function renderHome() {
 }
 
 function renderSelectOptions() {
-  const materialOptions = store.get().materials.filter((item) => item.active !== false).map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
+  const materialOptions = store.get().materials.filter((item) => item.active !== false).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
   ["#mapMaterial", "#analysisMaterial"].forEach((selector) => {
     const selected = $(selector).value;
     $(selector).innerHTML = `<option value="all">すべて</option>${materialOptions}`;
@@ -191,7 +191,7 @@ function renderSelectOptions() {
 function addMaterialRow(value = {}) {
   const row = document.createElement("div");
   row.className = "repeat-row material-repeat-row";
-  row.innerHTML = `<label>配布物<select data-field="materialId">${store.get().materials.filter((item) => item.active !== false).map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("")}</select></label><label>持出<input data-field="taken" type="number" min="0" value="${Number(value.taken || 0)}"></label><label>配布<input data-field="distributed" type="number" min="0" value="${Number(value.distributed || 0)}"></label><label>残部<input data-field="remaining" type="number" min="0" value="${Number(value.remaining || 0)}"></label><label>差異理由<input data-field="varianceReason" value="${escapeHtml(value.varianceReason || "")}" placeholder="不一致時"></label><button class="icon-button" data-remove-row type="button" aria-label="行を削除">×</button>`;
+  row.innerHTML = `<label>配布物<select data-field="materialId">${store.get().materials.filter((item) => item.active !== false).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")}</select></label><label>持出<input data-field="taken" type="number" min="0" value="${Number(value.taken || 0)}"></label><label>配布<input data-field="distributed" type="number" min="0" value="${Number(value.distributed || 0)}"></label><label>残部<input data-field="remaining" type="number" min="0" value="${Number(value.remaining || 0)}"></label><label>差異理由<input data-field="varianceReason" value="${escapeHtml(value.varianceReason || "")}" placeholder="不一致時"></label><button class="icon-button" data-remove-row type="button" aria-label="行を削除">×</button>`;
   if (value.materialId) $("[data-field='materialId']", row).value = value.materialId;
   $("#materialRows").append(row);
 }
@@ -311,7 +311,7 @@ function stopTimer(setEnd = true) {
 function renderHistory() {
   const search = $("#historySearch").value.toLowerCase();
   const items = filterActivities($("#historyPeriod").value).filter((activity) => JSON.stringify(activity).toLowerCase().includes(search)).sort((a, b) => `${b.date}${b.startTime}`.localeCompare(`${a.date}${a.startTime}`));
-  $("#historyList").innerHTML = items.length ? items.map((activity) => `<article class="activity-card"><div class="activity-card-header"><div><h3>${escapeHtml(dateFormat.format(new Date(`${activity.date}T00:00:00`)))}</h3><div class="meta-row"><span>${escapeHtml(activity.startTime)}〜${escapeHtml(activity.endTime)}</span><span>${(activityMinutes(activity) / 60).toFixed(1)}時間</span><span>${activity.peopleCount}人</span></div></div><strong>${yen.format(activityTotal(activity))}枚</strong></div><p>${escapeHtml(activity.areas.map((item) => item.area).join("、"))}</p><div class="meta-row"><span>${escapeHtml(activity.materials.map((item) => materialName(item.materialId)).join("、"))}</span></div><div class="button-row"><button class="button button-small" data-share-activity="${activity.id}" type="button">共有</button><button class="button button-small" data-edit-activity="${activity.id}" type="button">編集</button><button class="button button-small" data-delete-activity="${activity.id}" type="button">削除</button></div></article>`).join("") : '<p class="panel empty-state">条件に合う活動記録はありません。</p>';
+  $("#historyList").innerHTML = items.length ? items.map((activity) => `<article class="activity-card"><div class="activity-card-header"><div><h3>${escapeHtml(dateFormat.format(new Date(`${activity.date}T00:00:00`)))}</h3><div class="meta-row"><span>${escapeHtml(activity.startTime)}〜${escapeHtml(activity.endTime)}</span><span>${(activityMinutes(activity) / 60).toFixed(1)}時間</span><span>${activity.peopleCount}人</span></div></div><strong>${yen.format(activityTotal(activity))}枚</strong></div><p>${escapeHtml(activity.areas.map((item) => item.area).join("、"))}</p><div class="meta-row"><span>${escapeHtml(activity.materials.map((item) => materialName(item.materialId)).join("、"))}</span></div><div class="button-row"><button class="button button-small" data-share-activity="${escapeHtml(activity.id)}" type="button">共有</button><button class="button button-small" data-edit-activity="${escapeHtml(activity.id)}" type="button">編集</button><button class="button button-small" data-delete-activity="${escapeHtml(activity.id)}" type="button">削除</button></div></article>`).join("") : '<p class="panel empty-state">条件に合う活動記録はありません。</p>';
 }
 
 function decodeArc(topology, arcIndex) {
@@ -560,10 +560,6 @@ async function shareAnalysisImage() {
   const link = document.createElement("a"); link.download = file.name; link.href = URL.createObjectURL(blob); link.click(); URL.revokeObjectURL(link.href); toast("レポート画像を保存しました");
 }
 
-function csvEscape(value) {
-  const text = String(value ?? ""); return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 function downloadCsv(name, headers, rows) {
   const body = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
   const blob = new Blob(["\ufeff", body], { type: "text/csv;charset=utf-8" });
@@ -613,7 +609,8 @@ async function previewCsv(file) {
   pendingImport = missing.length ? [] : rows.map((row) => {
     const materialNameRaw = row[columns.material] || "インポート配布物";
     const existingMaterial = store.get().materials.find((item) => item.name === materialNameRaw);
-    return { id: columns.sourceId >= 0 && row[columns.sourceId] ? `import-${row[columns.sourceId]}` : uid("import"), date: row[columns.date], startTime: row[columns.startTime] || "00:00", endTime: row[columns.endTime] || "00:00", durationMinutes: minutesBetween(row[columns.date], row[columns.startTime], row[columns.endTime]), peopleCount: Number(row[columns.peopleCount] || 1), workers: String(row[columns.workers] || "").split(/[、,]/).filter(Boolean), memo: row[columns.memo] || "", materials: [{ materialId: existingMaterial?.id || "", materialNameRaw, taken: Number(row[columns.total] || 0), distributed: Number(row[columns.total] || 0), remaining: 0, varianceReason: "" }], areas: [{ area: arabicName(row[columns.area]), distributed: Number(row[columns.total] || 0), apartmentCount: 0, otherCount: 0 }], inputMethod: "csv", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const identity = createImportedActivityIdentity(columns.sourceId >= 0 ? row[columns.sourceId] : "", uid);
+    return { ...identity, date: row[columns.date], startTime: row[columns.startTime] || "00:00", endTime: row[columns.endTime] || "00:00", durationMinutes: minutesBetween(row[columns.date], row[columns.startTime], row[columns.endTime]), peopleCount: Number(row[columns.peopleCount] || 1), workers: String(row[columns.workers] || "").split(/[、,]/).filter(Boolean), memo: row[columns.memo] || "", materials: [{ materialId: existingMaterial?.id || "", materialNameRaw, taken: Number(row[columns.total] || 0), distributed: Number(row[columns.total] || 0), remaining: 0, varianceReason: "" }], areas: [{ area: arabicName(row[columns.area]), distributed: Number(row[columns.total] || 0), apartmentCount: 0, otherCount: 0 }], inputMethod: "csv", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   });
   $("#importPreview").innerHTML = missing.length ? `<div class="notice warning">必須列を判定できません：${missing.join("、")}。ポス活ログ標準CSVまたは列名を調整してください。</div>` : `<p><strong>${pendingImport.length}件</strong>を検出しました。先頭5件を確認してください。</p><div class="compact-list">${pendingImport.slice(0, 5).map((item) => `<div class="list-row"><span>${escapeHtml(item.date)} ${escapeHtml(item.areas[0].area)}</span><strong>${yen.format(activityTotal(item))}枚</strong></div>`).join("")}</div>`;
   $("#confirmImport").hidden = !pendingImport.length;
@@ -628,7 +625,7 @@ function findOrCreateMaterial(name) {
 function confirmImport() {
   let saved = 0; let duplicates = 0;
   pendingImport.forEach((item) => {
-    if (store.get().activities.some((existing) => existing.id === item.id || (existing.date === item.date && existing.startTime === item.startTime && activityTotal(existing) === activityTotal(item)))) { duplicates += 1; return; }
+    if (store.get().activities.some((existing) => (item.sourceId && (existing.id === item.sourceId || existing.sourceId === item.sourceId)) || (existing.date === item.date && existing.startTime === item.startTime && activityTotal(existing) === activityTotal(item)))) { duplicates += 1; return; }
     item.materials = item.materials.map(({ materialNameRaw, ...material }) => ({ ...material, materialId: material.materialId || findOrCreateMaterial(materialNameRaw) }));
     store.saveActivity(item); saved += 1;
   });
@@ -637,7 +634,7 @@ function confirmImport() {
 
 function renderSettings() {
   $("#monthlyGoal").value = store.get().goals[monthKey()] || "";
-  $("#materialMaster").innerHTML = store.get().materials.map((item) => `<div class="list-row"><span>${escapeHtml(item.name)}</span><button class="text-button" data-toggle-material="${item.id}" type="button">${item.active === false ? "表示する" : "非表示"}</button></div>`).join("");
+  $("#materialMaster").innerHTML = store.get().materials.map((item) => `<div class="list-row"><span>${escapeHtml(item.name)}</span><button class="text-button" data-toggle-material="${escapeHtml(item.id)}" type="button">${item.active === false ? "表示する" : "非表示"}</button></div>`).join("");
 }
 
 function renderAll() {
@@ -669,7 +666,7 @@ function bindEvents() {
   $("#csvFile").addEventListener("change", (event) => { if (event.target.files[0]) previewCsv(event.target.files[0]); }); $("#confirmImport").addEventListener("click", confirmImport);
   $("#exportActivities").addEventListener("click", exportActivities); $("#exportApartments").addEventListener("click", exportApartments); $("#exportAll").addEventListener("click", exportAllCsv);
   $("#loginButton").addEventListener("click", async () => { try { if (firebaseAdapter.user()) await firebaseAdapter.signOut(); else await firebaseAdapter.signIn(); } catch (error) { alert(error.message); } });
-  $("#deleteAccount").addEventListener("click", async () => { const confirmation = prompt("削除するには「削除」と入力してください。\n先にCSVを保存することをおすすめします。"); if (confirmation !== "削除") return; try { await firebaseAdapter.deleteAccount(); toast("ポス活ログのデータを削除しました"); } catch (error) { alert(`削除できませんでした。再ログイン後にお試しください。\n${error.message}`); } });
+  $("#deleteAccount").addEventListener("click", async () => { const confirmation = prompt("削除するには「削除」と入力してください。\n先にCSVを保存することをおすすめします。"); if (confirmation !== "削除") return; try { const result = await firebaseAdapter.deleteAccount(); toast("ポス活ログのデータを削除しました"); if (result?.reload) setTimeout(() => window.location.reload(), 700); } catch (error) { alert(`削除できませんでした。再ログイン後にお試しください。\n${error.message}`); } });
 }
 
 async function init() {

@@ -4,7 +4,7 @@ import path from "node:path";
 import { INITIAL_APARTMENTS } from "../js/data.js";
 
 const root = path.resolve(import.meta.dirname, "..");
-const required = ["index.html", "css/app.css", "js/app.js", "js/store.js", "js/firebase-adapter.js", "data/demographics.js", "manifest.webmanifest", "sw.js", "firebase/firestore.rules", "docs/FIREBASE_SETUP.md"];
+const required = ["index.html", "css/app.css", "js/app.js", "js/store.js", "js/firebase-adapter.js", "js/security.js", "data/demographics.js", "manifest.webmanifest", "sw.js", "firebase/firestore.rules", "docs/FIREBASE_SETUP.md"];
 let failed = false;
 
 for (const file of required) {
@@ -24,6 +24,10 @@ const html = await readFile(path.join(root, "index.html"), "utf8");
 for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地図", "マンション", "分析", "設定・データ管理"]) {
   if (!html.includes(label)) { console.error(`UI LABEL MISSING ${label}`); failed = true; }
 }
+if (html.includes("手動設定手順を見る")) { console.error("MANUAL FIREBASE SETUP LINK MUST NOT BE SHOWN"); failed = true; }
+
+const firebaseAdapter = await readFile(path.join(root, "js/firebase-adapter.js"), "utf8");
+if (firebaseAdapter.includes("設定画面の手順")) { console.error("HIDDEN FIREBASE SETUP INSTRUCTION MUST NOT BE REFERENCED"); failed = true; }
 
 const app = await readFile(path.join(root, "js/app.js"), "utf8");
 for (const feature of ["addCurrentLocationControl(activityMap)", "addCurrentLocationControl(apartmentMap)", 'map.on("locationfound"', 'map.on("locationerror"']) {

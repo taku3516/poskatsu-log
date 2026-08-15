@@ -9,7 +9,7 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    match /users/{uid}/{document=**} {
+    match /users/{uid}/app/state {
       allow read, create, update, delete: if owns(uid);
     }
 
