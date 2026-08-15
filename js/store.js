@@ -20,8 +20,26 @@ function migrateState(savedState) {
   const deletedIds = new Set(savedState.deletedInitialApartmentIds || []);
   const savedApartments = Array.isArray(savedState.apartments) ? savedState.apartments : [];
   const apartmentsById = new Map(savedApartments.map((item) => [item.id, item]));
+  const correctedUnits = new Map([
+    ["apt-vert-clair-osaki", { from: 230, to: 140 }],
+    ["apt-park-habio-ebara-nakanobu-ekimae", { from: 141, to: 140 }]
+  ]);
   for (const candidate of INITIAL_APARTMENTS) {
-    if (!apartmentsById.has(candidate.id) && !deletedIds.has(candidate.id)) apartmentsById.set(candidate.id, structuredClone(candidate));
+    const existing = apartmentsById.get(candidate.id);
+    if (!existing && !deletedIds.has(candidate.id)) {
+      apartmentsById.set(candidate.id, structuredClone(candidate));
+      continue;
+    }
+    if (!existing) continue;
+    const genericAddress = `東京都品川区${candidate.area}`;
+    const correction = correctedUnits.get(candidate.id);
+    apartmentsById.set(candidate.id, {
+      ...existing,
+      address: !existing.address || existing.address === genericAddress ? candidate.address : existing.address,
+      units: correction && existing.units === correction.from ? correction.to : existing.units,
+      lat: Number.isFinite(existing.lat) ? existing.lat : candidate.lat,
+      lng: Number.isFinite(existing.lng) ? existing.lng : candidate.lng
+    });
   }
   return {
     ...createInitialState(),

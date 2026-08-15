@@ -10,24 +10,70 @@ export const DEFAULT_MATERIALS = [
   { id: "material-default", name: "配布物（未指定）", active: true }
 ];
 
-export const APARTMENT_BASELINE_VERSION = 2;
+export const APARTMENT_BASELINE_VERSION = 3;
 
-const apartmentCandidate = (id, name, area, units, sourceUrl, address = `東京都品川区${area}`) => ({
-  id,
-  name,
-  address,
-  area,
-  units,
-  lat: null,
-  lng: null,
-  postingStatus: "unknown",
-  confidence: "candidate",
-  checkedAt: "",
-  reason: "",
-  memo: "公開マンション情報を2026年8月15日に確認。番地・座標と配布可否は現地確認が必要。",
-  sourceUrl,
-  history: []
-});
+const APARTMENT_LOCATIONS = {
+  "apt-osaki-west-city-towers": { lat: 35.616511, lng: 139.727781 },
+  "apt-brillia-towers-meguro": { lat: 35.632591, lng: 139.716732 },
+  "apt-prime-parks-shinagawa-seaside-tower": { lat: 35.607611, lng: 139.747676 },
+  "apt-park-tower-gran-sky": { lat: 35.624242, lng: 139.727238 },
+  "apt-park-city-osaki-tower": { lat: 35.622506, lng: 139.731699 },
+  "apt-grand-maison-shinagawa-seaside": { lat: 35.609913, lng: 139.746634 },
+  "apt-city-tower-oimachi": { lat: 35.605429, lng: 139.730842 },
+  "apt-park-city-musashikoyama-tower": { lat: 35.620137, lng: 139.704971 },
+  "apt-city-tower-musashikoyama": { lat: 35.620589, lng: 139.705549 },
+  "apt-laguna-tower": { lat: 35.616076, lng: 139.748207 },
+  "apt-ober-grandio-shinagawa-katsushima": { lat: 35.599215, lng: 139.744729 },
+  "apt-shinagawa-seaside-residence": { lat: 35.615306, lng: 139.750012 },
+  "apt-crest-tower-shinagawa-seaside": { lat: 35.606851, lng: 139.750087 },
+  "apt-shinagawa-east-city-tower": { lat: 35.622937, lng: 139.753587 },
+  "apt-tokyo-nile": { lat: 35.604427, lng: 139.745506 },
+  "apt-branz-city-shinagawa-katsushima": { lat: 35.600599, lng: 139.746541 },
+  "apt-park-tower-tokyo-south": { lat: 35.622731, lng: 139.729207 },
+  "apt-prime-parks-shinagawa-seaside-residence": { lat: 35.606202, lng: 139.747762 },
+  "apt-city-tower-shinagawa-park-front": { lat: 35.590196, lng: 139.736607 },
+  "apt-proud-tower-meguro-marc": { lat: 35.628794, lng: 139.717454 },
+  "apt-j-tower-nishioi": { lat: 35.600806, lng: 139.721565 },
+  "apt-gentry-house-shinagawa-oi": { lat: 35.601386, lng: 139.730233 },
+  "apt-proud-tower-higashigotanda": { lat: 35.624629, lng: 139.725911 },
+  "apt-park-homes-musashikoyama": { lat: 35.620524, lng: 139.706278 },
+  "apt-city-tower-osaki": { lat: 35.621515, lng: 139.725601 },
+  "apt-brillia-oimachi-lavie-tower": { lat: 35.607445, lng: 139.73016 },
+  "apt-core-stare-nishioi": { lat: 35.601766, lng: 139.722756 },
+  "apt-city-terrace-shinagawa-east": { lat: 35.622264, lng: 139.753529 },
+  "apt-le-cinq-osaki-city-tower": { lat: 35.623546, lng: 139.726105 },
+  "apt-city-tower-meguro": { lat: 35.627393, lng: 139.71612 },
+  "apt-vert-clair-osaki": { address: "東京都品川区大崎4丁目12番22号", lat: 35.617825, lng: 139.720154 },
+  "apt-gloria-hatsuho-gotenyama": { address: "東京都品川区北品川5丁目7番14号", lat: 35.620506, lng: 139.731201 },
+  "apt-park-house-o-tower": { address: "東京都品川区大崎3丁目1番1号", lat: 35.621609, lng: 139.724609 },
+  "apt-park-habio-ebara-nakanobu-ekimae": { address: "東京都品川区東中延1丁目9番13号", lat: 35.609585, lng: 139.711838 },
+  "apt-crescent-shinagawa": { address: "東京都品川区東品川1丁目8番1号", lat: 35.622314, lng: 139.743652 },
+  "apt-dresse-meguro-impres-tower": { address: "東京都品川区西五反田3丁目2番6号", lat: 35.629482, lng: 139.716736 },
+  "apt-abity-meguro": { address: "東京都品川区上大崎2丁目10番11号", lat: 35.636848, lng: 139.716843 },
+  "apt-park-habio-minami-oi": { address: "東京都品川区南大井4丁目10番5号", lat: 35.595959, lng: 139.736816 },
+  "apt-park-habio-meguro-sakuratei": { address: "東京都品川区上大崎4丁目5番37号", lat: 35.628273, lng: 139.715729 },
+  "apt-premium-cube-g-osaki": { address: "東京都品川区西品川2丁目2番25号", lat: 35.614231, lng: 139.727966 }
+};
+
+const apartmentCandidate = (id, name, area, units, sourceUrl, address = `東京都品川区${area}`) => {
+  const location = APARTMENT_LOCATIONS[id] || {};
+  return {
+    id,
+    name,
+    address: location.address || address,
+    area,
+    units,
+    lat: location.lat ?? null,
+    lng: location.lng ?? null,
+    postingStatus: "unknown",
+    confidence: "candidate",
+    checkedAt: "",
+    reason: "",
+    memo: "公開マンション情報と公開地図を2026年8月15日に確認。配布可否は現地確認が必要。",
+    sourceUrl,
+    history: []
+  };
+};
 
 const NOMU_RANKING_URL = "https://www.nomu.com/mansion/library/ranking/units/shinagawa/";
 const STEPON_LIBRARY_URL = "https://www.stepon.co.jp/mansion/library/area_13/list_13_109/";
@@ -85,7 +131,7 @@ export const INITIAL_APARTMENTS = [
   {
     ...apartmentCandidate("apt-osaki-west-city-towers", "大崎ウエストシティタワーズ", "大崎2丁目", 1090, "https://www.nomu.com/mansion/library/id/P0010451/"),
     confidence: "review",
-    memo: "2026年8月15日確認。ノムコムは1,090戸、住まい1は1,084戸と掲載しており要再確認。番地・座標と配布可否も現地確認が必要。"
+    memo: "2026年8月15日確認。ノムコムは1,090戸、住まい1は1,084戸と掲載しており要再確認。位置は公開地図で確認済み、配布可否は現地確認が必要。"
   },
   apartmentCandidate("apt-brillia-towers-meguro", "ブリリアタワーズ目黒", "上大崎3丁目", 940, "https://www.nomu.com/mansion/library/id/P0029871/"),
   apartmentCandidate("apt-prime-parks-shinagawa-seaside-tower", "プライムパークス品川シーサイド ザ・タワー", "東品川4丁目", 817, "https://www.nomu.com/mansion/library/id/P0032902/"),
@@ -116,10 +162,14 @@ export const INITIAL_APARTMENTS = [
   apartmentCandidate("apt-city-terrace-shinagawa-east", "シティテラス品川イースト", "東品川5丁目", 254, NOMU_RANKING_URL),
   apartmentCandidate("apt-le-cinq-osaki-city-tower", "ル・サンク大崎シティタワー", "大崎1丁目", 254, NOMU_RANKING_URL),
   apartmentCandidate("apt-city-tower-meguro", "シティタワー目黒", "西五反田3丁目", 244, NOMU_RANKING_URL),
-  apartmentCandidate("apt-vert-clair-osaki", "ヴェール・クレール大崎", "大崎4丁目", 230, MEC_RENT_URL),
+  {
+    ...apartmentCandidate("apt-vert-clair-osaki", "ヴェール・クレール大崎", "大崎4丁目", 140, MEC_RENT_URL),
+    confidence: "review",
+    memo: "2026年8月15日確認。公式物件概要は140戸、住まいリレー検索結果は230戸と掲載しており、公式値を採用。位置は住居表示から確認済み、配布可否は現地確認が必要。"
+  },
   apartmentCandidate("apt-gloria-hatsuho-gotenyama", "グローリア初穂御殿山", "北品川5丁目", 174, "https://www.sumai1.com/buyers/mansion/library/tpk_ML0003/?ensen_eki_cd%5B%5D=2159480&soukosu=100&todofuken_cd=13", "東京都品川区北品川5丁目7番14号"),
   apartmentCandidate("apt-park-house-o-tower", "パークハウスオー・タワー", "大崎3丁目", 153, MEC_RENT_URL),
-  apartmentCandidate("apt-park-habio-ebara-nakanobu-ekimae", "ザ・パークハビオ荏原中延駅前", "東中延1丁目", 141, MEC_RENT_URL),
+  apartmentCandidate("apt-park-habio-ebara-nakanobu-ekimae", "ザ・パークハビオ荏原中延駅前", "東中延1丁目", 140, MEC_RENT_URL),
   apartmentCandidate("apt-crescent-shinagawa", "クレッセント品川", "東品川1丁目", 135, "https://www.stepon.co.jp/mansion/library/area_13/townlist_13_109_018/"),
   apartmentCandidate("apt-dresse-meguro-impres-tower", "ドレッセ目黒インプレスタワー", "西五反田3丁目", 129, STEPON_LIBRARY_URL),
   apartmentCandidate("apt-abity-meguro", "アビティ目黒", "上大崎2丁目", 116, MEC_RENT_URL),
