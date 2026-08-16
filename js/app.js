@@ -138,13 +138,22 @@ function materialName(id) {
   return store.get().materials.find((item) => item.id === id)?.name || "配布物";
 }
 
+// 端末が「視差効果を減らす」設定のときはスムーススクロールを使わない
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 function navigate(view) {
   $$(".view").forEach((item) => item.classList.toggle("active", item.id === `view-${view}`));
-  $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
+  $$(".nav-item").forEach((item) => {
+    const isActive = item.dataset.view === view;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-current", isActive ? "page" : "false");
+    // スマホではタブ列が横スクロールするため、選択中のタブを必ず画面内に入れる
+    if (isActive) item.scrollIntoView({ inline: "center", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  });
   if (view === "map") setTimeout(renderActivityMap, 30);
   if (view === "apartments") setTimeout(renderApartmentMap, 30);
   if (view === "analysis") renderAnalysis();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
 function statCard(label, value, suffix = "") {
@@ -691,6 +700,17 @@ function bindEvents() {
   $("#accountSwitcher").addEventListener("change", (event) => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを切り替えられません。"); event.target.value = store.getActiveAccount().id; return; } store.switchAccount(event.target.value); resetActivityForm(); pendingImport = []; toast(`${store.getActiveAccount().name}に切り替えました`); });
   $("#createAccount").addEventListener("click", () => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを追加できません。"); return; } try { store.createAccount($("#newAccountName").value); $("#newAccountName").value = ""; resetActivityForm(); pendingImport = []; toast("活動アカウントを追加しました"); } catch (error) { alert(error.message); } });
   $("#csvFile").addEventListener("change", (event) => { if (event.target.files[0]) previewCsv(event.target.files[0]); }); $("#confirmImport").addEventListener("click", confirmImport);
+  // 画面回転やアドレスバーの開閉で地図のサイズがずれるため、変化後に再計算する
+  let resizeTimer;
+  const refreshMapSize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (activityMap && $("#view-map").classList.contains("active")) activityMap.invalidateSize();
+      if (apartmentMap && $("#view-apartments").classList.contains("active")) apartmentMap.invalidateSize();
+    }, 200);
+  };
+  window.addEventListener("resize", refreshMapSize);
+  window.addEventListener("orientationchange", refreshMapSize);
   $("#exportActivities").addEventListener("click", exportActivities); $("#exportApartments").addEventListener("click", exportApartments); $("#exportAll").addEventListener("click", exportAllCsv);
   $("#loginButton").addEventListener("click", async () => { try { if (firebaseAdapter.user()) await firebaseAdapter.signOut(); else await firebaseAdapter.signIn(); } catch (error) { alert(error.message); } });
   $("#deleteGoogleAccountData").addEventListener("click", async () => { const confirmation = prompt("全活動アカウントを削除するには「全削除」と入力してください。\n先に各アカウントのCSVを保存することをおすすめします。"); if (confirmation !== "全削除") return; try { const result = await firebaseAdapter.deleteAccount(); toast("ポス活ログの全データを削除しました"); if (result?.reload) setTimeout(() => window.location.reload(), 700); } catch (error) { alert(`削除できませんでした。再ログイン後にお試しください。\n${error.message}`); } });

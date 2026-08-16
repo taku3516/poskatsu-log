@@ -1,9 +1,538 @@
-:root{--blue:#1557a6;--blue-dark:#0e3d79;--blue-soft:#eaf2fb;--ink:#172033;--muted:#667085;--line:#d9e0ea;--surface:#fff;--canvas:#f4f6f9;--danger:#b42318;--warning:#9a6700;--success:#16794a;--radius:10px;--shadow:0 8px 24px rgba(16,40,75,.08)}
-.account-switcher{display:flex;align-items:center;gap:7px;font-size:.76rem;white-space:nowrap}.account-switcher select{width:auto;min-width:150px;max-width:250px;padding:8px 30px 8px 10px}.account-management{grid-column:1/-1}.account-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.account-row:last-child{border-bottom:0}.account-row input{min-width:0}.account-row-current{grid-column:1/-1;color:var(--blue);font-size:.76rem;font-weight:700}
+/* ===================================================================
+   ポス活ログ スタイルシート
+   構成:
+     1. デザイントークン / 基盤
+     2. ヘッダー・ナビゲーション
+     3. 共通パーツ（ボタン・パネル・カード）
+     4. フォーム
+     5. 各ビュー固有（地図・分析・設定）
+     6. ダイアログ・トースト
+     7. レスポンシブ（タブレット → スマートフォン）
+     8. 印刷・アクセシビリティ
+   スマートフォンでの閲覧を前提に、横スクロールが発生しない設計にしている。
+   =================================================================== */
+
+/* ------------------------------------------------------------------
+   1. デザイントークン / 基盤
+   ------------------------------------------------------------------ */
+:root{
+  --blue:#1557a6;
+  --blue-dark:#0e3d79;
+  --blue-soft:#eaf2fb;
+  --ink:#172033;
+  --muted:#667085;
+  --line:#d9e0ea;
+  --surface:#fff;
+  --canvas:#f4f6f9;
+  --danger:#b42318;
+  --warning:#9a6700;
+  --success:#16794a;
+  --radius:10px;
+  --shadow:0 8px 24px rgba(16,40,75,.08);
+  /* タップ領域の最小サイズ（WCAG 2.5.8 の推奨値） */
+  --tap:44px;
+  /* 端末のセーフエリア（ノッチ・ホームインジケーター）を考慮した余白 */
+  --gutter:16px;
+  --safe-left:max(var(--gutter),env(safe-area-inset-left));
+  --safe-right:max(var(--gutter),env(safe-area-inset-right));
+}
+
+*{box-sizing:border-box}
+
+html{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+  color:var(--ink);
+  background:var(--canvas);
+  scroll-behavior:smooth;
+  /* iOS の横向き時に文字サイズが勝手に拡大されるのを防ぐ */
+  -webkit-text-size-adjust:100%;
+}
+
+body{
+  margin:0;
+  min-width:320px;
+  /* 想定外の要素がはみ出しても、ページ全体が横スクロールしないようにする保険。
+     clip は hidden と違い position:sticky を壊さない。 */
+  overflow-x:clip;
+}
+
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a{color:var(--blue)}
+
+/* display を明示したクラス（.button など）がブラウザ既定の [hidden] を打ち消すため、
+   hidden 属性を常に優先させる。JS で hidden を切り替えている要素の表示崩れを防ぐ。 */
+[hidden]{display:none!important}
+
+.muted{color:var(--muted)}
+
+.skip-link{position:fixed;top:-100px;left:12px;z-index:999;background:#fff;padding:10px}
+.skip-link:focus{top:12px}
+
+/* ------------------------------------------------------------------
+   2. ヘッダー・ナビゲーション
+   ------------------------------------------------------------------ */
+.app-header{
+  min-height:82px;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+  padding:14px max(20px,calc((100% - 1240px)/2));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+.app-header h1{font-size:1.55rem;margin:0;letter-spacing:.04em}
+.app-identity{min-width:0}
+
+.eyebrow{margin:0 0 3px;color:var(--blue);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+.account-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.button-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.account-switcher{display:flex;align-items:center;gap:7px;font-size:.76rem;white-space:nowrap;min-width:0}
+.account-switcher select{width:auto;min-width:150px;max-width:250px;padding:8px 30px 8px 10px}
+
+/* 同期状態バッジ。ログイン後は表示名が入り長くなるため必ず省略記号で丸める */
+#syncBadge{max-width:min(240px,45vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.5}
+
+.primary-nav{
+  position:sticky;
+  top:0;
+  z-index:500;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:center;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:0 12px;
+  /* タブが画面外に続くことを示すため端をフェードさせる */
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+  overscroll-behavior-x:contain;
+}
+.primary-nav::-webkit-scrollbar{display:none}
+
+.nav-item{
+  flex:0 0 auto;
+  min-width:84px;
+  min-height:48px;
+  border:0;
+  border-bottom:3px solid transparent;
+  background:transparent;
+  padding:14px 13px;
+  color:var(--muted);
+  font-weight:700;
+  white-space:nowrap;
+  scroll-snap-align:center;
+}
+.nav-item:hover,.nav-item.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+.app-main{
+  width:min(1240px,calc(100% - 32px));
+  margin:26px auto 80px;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.view{display:none}
+.view.active{display:block}
+
+.section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin:0 0 18px}
+.section-heading h2{margin:0;font-size:1.75rem}
+.section-heading > p{margin:0}
+
+/* ------------------------------------------------------------------
+   3. 共通パーツ（ボタン・パネル・カード）
+   ------------------------------------------------------------------ */
+.button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:var(--tap);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 15px;
+  background:#fff;
+  color:var(--ink);
+  font-weight:700;
+  text-decoration:none;
+  text-align:center;
+}
+.button:hover{border-color:#9db5d4}
 .button:disabled{opacity:.45;cursor:not-allowed}
-*{box-sizing:border-box}html{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:var(--ink);background:var(--canvas);scroll-behavior:smooth}body{margin:0;min-width:320px}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:var(--blue)}.skip-link{position:fixed;top:-100px;left:12px;z-index:999;background:#fff;padding:10px}.skip-link:focus{top:12px}.app-header{min-height:82px;background:var(--surface);border-bottom:1px solid var(--line);padding:14px max(20px,calc((100vw - 1240px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px}.app-header h1{font-size:1.55rem;margin:0;letter-spacing:.04em}.eyebrow{margin:0 0 3px;color:var(--blue);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.account-area,.button-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.primary-nav{position:sticky;top:0;z-index:500;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:center;overflow:auto;padding:0 12px}.nav-item{min-width:84px;border:0;border-bottom:3px solid transparent;background:transparent;padding:14px 13px;color:var(--muted);font-weight:700;white-space:nowrap}.nav-item:hover,.nav-item.active{color:var(--blue);border-bottom-color:var(--blue)}.app-main{width:min(1240px,calc(100% - 32px));margin:26px auto 80px}.view{display:none}.view.active{display:block}.section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin:0 0 18px}.section-heading h2{margin:0;font-size:1.75rem}.muted{color:var(--muted)}.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.button{border:1px solid var(--line);border-radius:8px;padding:10px 15px;background:#fff;color:var(--ink);font-weight:700;text-decoration:none;text-align:center}.button:hover{border-color:#9db5d4}.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}.button-primary:hover{background:var(--blue-dark)}.button-secondary{background:var(--blue-soft);border-color:#c5d9f1;color:var(--blue-dark)}.button-quiet{background:#fff}.button-danger{color:#fff;background:var(--danger);border-color:var(--danger)}.button-small{padding:7px 10px;font-size:.86rem}.action-button{padding:16px;font-size:1rem}.status-badge{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:6px;background:var(--blue-soft);color:var(--blue-dark);font-size:.78rem;font-weight:700}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(16,40,75,.03)}.stat-card span{display:block;color:var(--muted);font-size:.82rem}.stat-card strong{display:block;font-size:1.6rem;margin-top:5px}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 2px 9px rgba(16,40,75,.03)}.panel h3{margin:0 0 13px;font-size:1.03rem}.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.panel-heading h3,.panel-heading h2{margin:0}.goal-panel{margin-bottom:16px}.progress-track{height:10px;background:#e8edf4;border-radius:2px;overflow:hidden}.progress-value{height:100%;background:var(--blue)}.progress-copy{display:flex;justify-content:space-between;margin-bottom:8px}.two-column,.chart-grid,.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.text-button{border:0;background:transparent;color:var(--blue);font-weight:700}.empty-state{padding:24px 8px;text-align:center;color:var(--muted)}.list-row{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}.list-row:last-child{border-bottom:0}.list-row p{margin:3px 0 0}.list-value{text-align:right;white-space:nowrap}.timer-panel{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.timer-panel strong{display:block;font-variant-numeric:tabular-nums;font-size:2rem;margin-top:8px}.form-layout{display:grid;gap:16px}.form-section{display:grid;gap:13px}.form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}label{display:grid;gap:6px;color:#344054;font-size:.86rem;font-weight:700}input,select,textarea{width:100%;border:1px solid #bfc8d5;border-radius:7px;background:#fff;color:var(--ink);padding:10px 11px}input:focus,select:focus,textarea:focus{outline:3px solid rgba(21,87,166,.18);border-color:var(--blue)}textarea{resize:vertical}.repeat-row{display:grid;grid-template-columns:2fr repeat(4,1fr) auto;gap:8px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}.area-repeat-row{grid-template-columns:2fr 1fr 1fr 1fr auto}.icon-button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:7px;font-size:1.25rem}.form-actions{display:flex;justify-content:flex-end;gap:10px}.notice{padding:13px;border-radius:8px}.warning{background:#fff7df;color:#6f4f00;border:1px solid #f0d68a}.filters{display:flex;align-items:end;gap:12px;margin-bottom:16px}.filters label{min-width:150px;flex:1}.card-list{display:grid;gap:10px}.activity-card,.apartment-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px;display:grid;gap:8px}.activity-card-header,.apartment-card-header{display:flex;justify-content:space-between;gap:12px}.activity-card h3,.apartment-card h3{margin:0;font-size:1rem}.meta-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:.85rem}.map-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:16px}.map-canvas{height:590px;border:1px solid var(--line);border-radius:var(--radius);background:#e6edf5;overflow:hidden}.map-detail{height:max-content}.source-note{font-size:.78rem;color:var(--muted)}.compact-list{max-height:590px;overflow:auto}.posting-allowed{color:var(--success)}.posting-prohibited{color:var(--danger)}.posting-conditional{color:var(--warning)}.report-card{display:grid;gap:16px}.bar-chart{min-height:260px;display:flex;align-items:end;gap:8px;padding-top:20px}.bar-column{flex:1;min-width:34px;text-align:center}.bar{background:var(--blue);min-height:2px;border-radius:3px 3px 0 0}.bar-column small{display:block;color:var(--muted);font-size:.68rem;margin-top:6px;overflow:hidden}.ranking-row{display:grid;grid-template-columns:minmax(80px,1fr) 2fr auto;align-items:center;gap:10px;margin:10px 0}.mini-track{height:8px;background:#edf0f4}.mini-value{height:100%;background:var(--blue)}.settings-grid{align-items:start}.inline-form{display:flex;gap:8px}.danger-zone{border-color:#f0b8b2;background:#fffafa}dialog{width:min(760px,calc(100% - 30px));max-height:90vh;border:0;border-radius:12px;padding:0;box-shadow:var(--shadow)}dialog::backdrop{background:rgba(12,25,45,.55)}.dialog-form{padding:20px;display:grid;gap:13px}.toast{position:fixed;right:18px;bottom:18px;z-index:1000;max-width:360px;background:#172033;color:#fff;padding:12px 16px;border-radius:8px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}.leaflet-container{font:inherit}.map-label{background:#fff;border:1px solid #8aa6c9;border-radius:3px;color:#173f70;font-size:10px;font-weight:700;padding:2px 4px;box-shadow:none}.map-label:before{display:none}
-.current-location-control{background:#fff}.current-location-button{display:block;min-width:92px;height:34px;border:0;background:#fff;color:var(--blue-dark);font-weight:700;padding:0 10px;white-space:nowrap}.current-location-button:hover{background:var(--blue-soft)}.current-location-button:focus-visible{outline:3px solid rgba(21,87,166,.35);outline-offset:1px}.current-location-button:disabled{color:var(--muted);cursor:wait}
-@media(max-width:860px){.stat-grid{grid-template-columns:repeat(2,1fr)}.two-column,.chart-grid,.settings-grid,.map-layout{grid-template-columns:1fr}.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.map-canvas{height:480px}.compact-list{max-height:none}.repeat-row{grid-template-columns:repeat(2,minmax(0,1fr))}.repeat-row .icon-button{align-self:end}.primary-nav{justify-content:flex-start}}
-@media(max-width:560px){.app-header{align-items:flex-start;padding:12px 16px}.account-area{justify-content:flex-end}.account-area .status-badge{display:none}.app-main{width:min(100% - 20px,1240px);margin-top:18px}.nav-item{min-width:70px;padding:12px 10px;font-size:.82rem}.section-heading{align-items:flex-start}.section-heading h2{font-size:1.4rem}.action-grid{grid-template-columns:1fr 1fr}.action-grid .action-button:first-child{grid-column:1/-1}.stat-grid{gap:8px}.stat-card{padding:13px}.stat-card strong{font-size:1.35rem}.form-grid{grid-template-columns:1fr}.filters{display:grid;grid-template-columns:1fr 1fr}.filters label{min-width:0}.map-filters,.apartment-filters{grid-template-columns:1fr 1fr}.map-canvas{height:420px}.repeat-row,.area-repeat-row{grid-template-columns:1fr 1fr}.repeat-row label:first-child,.area-repeat-row label:first-child{grid-column:1/-1}.button-row{width:100%}.button-row .button{flex:1}.timer-panel{align-items:flex-end}.timer-panel strong{font-size:1.65rem}}
-@media print{.app-header,.primary-nav,.section-heading .button-row,.filters{display:none}.app-main{width:100%;margin:0}.view{display:none!important}#view-analysis{display:block!important}.panel,.stat-card{box-shadow:none}}
-@media(max-width:560px){.app-header{gap:10px}.app-header h1{font-size:1.35rem;white-space:nowrap}.account-switcher{align-items:flex-end;flex-direction:column}.account-switcher select{min-width:145px;max-width:180px}.account-row .button{padding-inline:9px}}
+.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.button-primary:hover{background:var(--blue-dark)}
+.button-secondary{background:var(--blue-soft);border-color:#c5d9f1;color:var(--blue-dark)}
+.button-quiet{background:#fff}
+.button-danger{color:#fff;background:var(--danger);border-color:var(--danger)}
+.button-small{padding:7px 10px;font-size:.86rem;min-height:38px}
+.action-button{padding:16px;font-size:1rem;min-height:56px}
+
+.text-button{
+  display:inline-flex;
+  align-items:center;
+  min-height:var(--tap);
+  padding:0 2px;
+  border:0;
+  background:transparent;
+  color:var(--blue);
+  font-weight:700;
+}
+
+.icon-button{
+  width:var(--tap);
+  height:var(--tap);
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:7px;
+  font-size:1.25rem;
+  line-height:1;
+}
+
+/* グリッドのトラックは必ず minmax(0,…) で最小値を 0 にする。
+   既定の 1fr（= minmax(auto,1fr)）だと中身の max-content まで広がり、
+   長いグラフや長文がページ全体を横に押し広げてしまうため。 */
+.action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+
+.status-badge{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:6px;background:var(--blue-soft);color:var(--blue-dark);font-size:.78rem;font-weight:700}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(16,40,75,.03)}
+.stat-card span{display:block;color:var(--muted);font-size:.82rem}
+.stat-card strong{display:block;font-size:1.6rem;margin-top:5px}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 2px 9px rgba(16,40,75,.03)}
+.panel h3{margin:0 0 13px;font-size:1.03rem}
+.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.panel-heading h3,.panel-heading h2{margin:0}
+
+.goal-panel{margin-bottom:16px}
+.progress-track{height:10px;background:#e8edf4;border-radius:2px;overflow:hidden}
+.progress-value{height:100%;background:var(--blue)}
+.progress-copy{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+
+.two-column,.chart-grid,.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+
+.empty-state{padding:24px 8px;text-align:center;color:var(--muted)}
+
+.list-row{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.list-row:last-child{border-bottom:0}
+.list-row p{margin:3px 0 0}
+.list-row > div{min-width:0}
+.list-value{text-align:right;white-space:nowrap;flex:0 0 auto}
+
+.card-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.activity-card,.apartment-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px;display:grid;gap:8px}
+.activity-card-header,.apartment-card-header{display:flex;justify-content:space-between;gap:12px}
+.activity-card-header > div,.apartment-card-header > div{min-width:0}
+/* 右端の枚数・配布可否は物件名が長くても折り返さないようにする */
+.activity-card-header > strong,.apartment-card-header > strong{flex:0 0 auto;white-space:nowrap}
+.activity-card h3,.apartment-card h3{margin:0;font-size:1rem;overflow-wrap:anywhere}
+.meta-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:.85rem}
+
+.notice{padding:13px;border-radius:8px}
+.warning{background:#fff7df;color:#6f4f00;border:1px solid #f0d68a}
+
+.source-note{font-size:.78rem;color:var(--muted)}
+
+/* ------------------------------------------------------------------
+   4. フォーム
+   ------------------------------------------------------------------ */
+.form-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.form-section{display:grid;grid-template-columns:minmax(0,1fr);gap:13px}
+.form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+
+label{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;color:#344054;font-size:.86rem;font-weight:700}
+
+input,select,textarea{
+  width:100%;
+  min-width:0;
+  border:1px solid #bfc8d5;
+  border-radius:7px;
+  background:#fff;
+  color:var(--ink);
+  padding:10px 11px;
+  /* 16px を下回ると iOS Safari がフォーカス時にページを自動拡大してしまうため固定 */
+  font-size:1rem;
+}
+input:focus,select:focus,textarea:focus{outline:3px solid rgba(21,87,166,.18);border-color:var(--blue)}
+textarea{resize:vertical}
+
+/* 配布物・町丁目の繰り返し入力行 */
+.repeat-row{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}
+.area-repeat-row{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto}
+
+.form-actions{display:flex;justify-content:flex-end;gap:10px}
+
+.filters{display:flex;align-items:end;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.filters label{min-width:150px;flex:1}
+
+.inline-form{display:flex;gap:8px;align-items:center}
+.inline-form input{flex:1 1 auto;min-width:0}
+.inline-form .button{flex:0 0 auto;white-space:nowrap}
+
+/* ------------------------------------------------------------------
+   5. 各ビュー固有
+   ------------------------------------------------------------------ */
+/* 記録：タイマー */
+.timer-panel{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.timer-panel > div{min-width:0}
+.timer-panel strong{display:block;font-variant-numeric:tabular-nums;font-size:2rem;margin-top:8px}
+
+/* 地図・マンション */
+.map-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:16px}
+.map-canvas{height:590px;border:1px solid var(--line);border-radius:var(--radius);background:#e6edf5;overflow:hidden}
+.map-detail{height:max-content}
+.compact-list{max-height:590px;overflow:auto}
+
+.posting-allowed{color:var(--success)}
+.posting-prohibited{color:var(--danger)}
+.posting-conditional{color:var(--warning)}
+
+.leaflet-container{font:inherit}
+.map-label{background:#fff;border:1px solid #8aa6c9;border-radius:3px;color:#173f70;font-size:10px;font-weight:700;padding:2px 4px;box-shadow:none}
+.map-label:before{display:none}
+
+.current-location-control{background:#fff}
+.current-location-button{display:block;min-width:92px;height:34px;border:0;background:#fff;color:var(--blue-dark);font-weight:700;padding:0 10px;white-space:nowrap}
+.current-location-button:hover{background:var(--blue-soft)}
+.current-location-button:focus-visible{outline:3px solid rgba(21,87,166,.35);outline-offset:1px}
+.current-location-button:disabled{color:var(--muted);cursor:wait}
+
+/* 分析 */
+.report-card{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+
+/* 棒グラフ。期間が長いと列数が増えるため、グラフ自体を横スクロール領域にして
+   ページ全体が横に広がらないようにする（これが無いと body ごと横スクロールする）。 */
+.bar-chart{
+  min-height:260px;
+  display:flex;
+  align-items:end;
+  gap:8px;
+  padding-top:20px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+}
+.bar-column{flex:1 0 44px;text-align:center}
+.bar{background:var(--blue);min-height:2px;border-radius:3px 3px 0 0}
+.bar-column strong{font-size:.82rem;white-space:nowrap}
+.bar-column small{display:block;color:var(--muted);font-size:.68rem;margin-top:6px;white-space:nowrap}
+.bar-chart .empty-state{margin:auto;flex:1 0 auto}
+
+.ranking-row{display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr) auto;align-items:center;gap:10px;margin:10px 0}
+.ranking-row > span{min-width:0;overflow-wrap:anywhere}
+.mini-track{height:8px;background:#edf0f4}
+.mini-value{height:100%;background:var(--blue)}
+
+/* 設定 */
+.settings-grid{align-items:start}
+.account-management{grid-column:1/-1}
+.account-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.account-row:last-child{border-bottom:0}
+.account-row input{min-width:0}
+.account-row-current{grid-column:1/-1;color:var(--blue);font-size:.76rem;font-weight:700}
+.danger-zone{border-color:#f0b8b2;background:#fffafa}
+
+/* ------------------------------------------------------------------
+   6. ダイアログ・トースト
+   ------------------------------------------------------------------ */
+dialog{width:min(760px,calc(100% - 30px));max-height:90vh;border:0;border-radius:12px;padding:0;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(12,25,45,.55)}
+.dialog-form{padding:20px;display:grid;gap:13px}
+
+/* タイトルと保存ボタンは長いフォームをスクロールしても常に見えるようにする */
+.dialog-form > .panel-heading{position:sticky;top:0;z-index:2;background:#fff;padding:4px 0 10px;margin:-4px 0 0;border-bottom:1px solid var(--line)}
+.dialog-form > .form-actions{position:sticky;bottom:0;z-index:2;background:#fff;padding:12px 0 4px;margin-bottom:-4px;border-top:1px solid var(--line)}
+
+.toast{
+  position:fixed;
+  left:auto;
+  right:max(18px,env(safe-area-inset-right));
+  bottom:calc(18px + env(safe-area-inset-bottom));
+  z-index:1000;
+  max-width:min(360px,calc(100vw - 36px));
+  background:#172033;
+  color:#fff;
+  padding:12px 16px;
+  border-radius:8px;
+  opacity:0;
+  transform:translateY(10px);
+  pointer-events:none;
+  transition:.2s;
+}
+.toast.show{opacity:1;transform:none}
+
+/* ------------------------------------------------------------------
+   7. レスポンシブ
+   ------------------------------------------------------------------ */
+
+/* --- タブレット・小型ノート（〜860px） --- */
+@media(max-width:860px){
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two-column,.chart-grid,.settings-grid,.map-layout{grid-template-columns:minmax(0,1fr)}
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .map-canvas{height:480px}
+  .compact-list{max-height:none}
+  .repeat-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .repeat-row .icon-button{align-self:end}
+  .primary-nav{justify-content:flex-start}
+}
+
+/* --- スマートフォン（〜640px） --- */
+@media(max-width:640px){
+  /* ヘッダー：英字リードを省き、2段グリッドに圧縮する。
+     1段目「タイトル｜ログイン」／2段目「アカウント選択｜同期状態」。
+     .account-area を display:contents にして、その子を直接グリッドへ配置する。 */
+  .app-header{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:
+      "title  login"
+      "switch badge";
+    align-items:center;
+    gap:8px 10px;
+    min-height:0;
+    padding:10px var(--safe-right) 10px var(--safe-left);
+  }
+  .app-header .eyebrow{display:none}
+  .app-header h1{font-size:1.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app-identity{grid-area:title}
+  .account-area{display:contents}
+  .account-switcher{grid-area:switch;min-width:0}
+  .account-switcher-label{display:none}
+  .account-switcher select{width:100%;min-width:0;max-width:none}
+  #syncBadge{grid-area:badge;justify-self:end;max-width:45vw}
+  #loginButton{grid-area:login;min-height:40px;padding:8px 10px;font-size:.8rem;white-space:nowrap}
+
+  .primary-nav{
+    padding-left:var(--safe-left);
+    padding-right:var(--safe-right);
+    /* 端をフェードさせ、左右にタブが続くことを視覚的に伝える */
+    mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);
+  }
+  .nav-item{min-width:0;padding:12px 15px;font-size:.88rem}
+
+  .app-main{width:min(100% - 20px,1240px);margin-top:18px}
+
+  .section-heading{flex-direction:column;align-items:stretch;gap:12px}
+  .section-heading h2{font-size:1.4rem}
+  .section-heading .button-row,.section-heading > .button{width:100%}
+  .section-heading .button-row .button{flex:1}
+
+  .action-grid{grid-template-columns:1fr 1fr}
+  .action-grid .action-button:first-child{grid-column:1/-1}
+
+  .stat-grid{gap:8px}
+  .stat-card{padding:13px}
+  .stat-card strong{font-size:1.35rem}
+  /* 5枚など奇数枚のときに最後の1枚が中途半端に残らないよう横幅いっぱいにする */
+  .stat-grid > :last-child:nth-child(odd){grid-column:1/-1}
+
+  .form-grid{grid-template-columns:1fr}
+
+  .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .filters label{min-width:0}
+  .map-filters,.apartment-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+  /* 繰り返し入力行はカード状にまとめ、削除ボタンを右上に固定して行の区切りを明確にする */
+  .repeat-row{
+    position:relative;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:#fbfcfe;
+    padding:14px;
+  }
+  .repeat-row + .repeat-row{margin-top:10px}
+  .repeat-row label:first-child{grid-column:1/-1;padding-right:calc(var(--tap) + 8px)}
+  .repeat-row .icon-button{position:absolute;top:10px;right:10px}
+
+  /* 長いフォームでも保存ボタンにいつでも届くよう画面下に固定する */
+  .form-actions{
+    position:sticky;
+    bottom:0;
+    gap:8px;
+    padding:10px 0 calc(10px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,rgba(244,246,249,0) 0,var(--canvas) 22%);
+  }
+  .form-actions .button{flex:1}
+
+  .timer-panel{align-items:flex-end}
+  .timer-panel strong{font-size:1.65rem}
+
+  .map-canvas{height:clamp(300px,58vh,520px)}
+
+  /* 棒グラフは列幅を固定し、はみ出す分はグラフ内で横スクロールさせる。
+     下端の余白はスクロールバーが月ラベルに重ならないようにするためのもの。 */
+  .bar-chart{min-height:220px;gap:6px;padding-bottom:8px}
+  .bar-column{flex:0 0 58px}
+
+  /* ランキングはラベルを1行目に独立させ、日本語の途中改行を避ける */
+  .ranking-row{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;margin:14px 0}
+  .ranking-row .mini-track{grid-column:1/-1;order:2}
+  .ranking-row > strong{text-align:right;white-space:nowrap}
+
+  .account-row{grid-template-columns:minmax(0,1fr) auto auto}
+  .account-row .button{padding-inline:9px}
+
+  .button-row{width:100%}
+  .button-row .button{flex:1}
+
+  /* ダイアログはボトムシート表示にして親指で届く位置に置く */
+  dialog{
+    width:100%;
+    max-width:none;
+    max-height:92dvh;
+    margin:auto auto 0;
+    border-radius:16px 16px 0 0;
+  }
+  .dialog-form{padding:16px var(--safe-right) calc(8px + env(safe-area-inset-bottom)) var(--safe-left)}
+  .dialog-form > .panel-heading h2{font-size:1.15rem}
+
+  .toast{
+    left:max(12px,env(safe-area-inset-left));
+    right:max(12px,env(safe-area-inset-right));
+    max-width:none;
+  }
+}
+
+/* --- 小型スマートフォン（〜359px：iPhone SE 第1世代など） --- */
+@media(max-width:359px){
+  .app-header h1{font-size:1.1rem}
+  #syncBadge{display:none}
+  .action-grid{grid-template-columns:minmax(0,1fr)}
+  .filters,.map-filters,.apartment-filters{grid-template-columns:minmax(0,1fr)}
+  .form-actions{flex-wrap:wrap}
+}
+
+/* --- 横向き（高さが低い）端末：地図が画面を占有しすぎないようにする --- */
+@media(max-height:520px) and (orientation:landscape){
+  .map-canvas{height:320px}
+}
+
+/* ------------------------------------------------------------------
+   8. 印刷・アクセシビリティ
+   ------------------------------------------------------------------ */
+@media print{
+  .app-header,.primary-nav,.section-heading .button-row,.filters{display:none}
+  .app-main{width:100%;margin:0}
+  .view{display:none!important}
+  #view-analysis{display:block!important}
+  .panel,.stat-card{box-shadow:none}
+  .bar-chart{overflow:visible}
+}
+
+/* キーボード操作時のフォーカスを全ての操作要素で見えるようにする */
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{
+  outline:3px solid rgba(21,87,166,.45);
+  outline-offset:2px;
+}
+
+/* 視差効果を減らす設定の端末ではアニメーションを止める */
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
