@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#1557a6">
+  <meta name="theme-color" content="#0017c1">
   <meta name="description" content="品川区のポスティング活動を記録・分析する個人向けPWA">
   <title>ポス活ログ</title>
   <link rel="manifest" href="./manifest.webmanifest">
@@ -15,8 +15,8 @@
   <a class="skip-link" href="#main">本文へ移動</a>
   <header class="app-header">
     <div class="app-identity">
-      <p class="eyebrow">Posting activity tracker</p>
       <h1>ポス活ログ</h1>
+      <p class="app-subtitle">品川区のポスティング活動記録</p>
     </div>
     <div class="account-area">
       <label class="account-switcher"><span class="account-switcher-label">活動アカウント</span><select id="accountSwitcher" aria-label="活動アカウントを切り替え"></select></label>
@@ -38,7 +38,7 @@
   <main id="main" class="app-main">
     <section id="view-home" class="view active" aria-labelledby="homeTitle">
       <div class="section-heading">
-        <div><p class="eyebrow">Dashboard</p><h2 id="homeTitle">今月の活動</h2></div>
+        <h2 id="homeTitle">今月の活動</h2>
         <p id="todayLabel" class="muted"></p>
       </div>
       <div class="action-grid">
@@ -58,7 +58,7 @@
     </section>
 
     <section id="view-record" class="view" aria-labelledby="recordTitle">
-      <div class="section-heading"><div><p class="eyebrow">New activity</p><h2 id="recordTitle">活動を記録</h2></div></div>
+      <div class="section-heading"><h2 id="recordTitle">活動を記録</h2></div>
       <section id="timerPanel" class="panel timer-panel">
         <div><span id="timerStatus" class="status-badge">停止中</span><strong id="timerDisplay">00:00:00</strong><p id="timerStartedAt" class="muted">開始ボタンを押すと計測します</p></div>
         <button id="timerToggle" class="button button-primary" type="button">開始</button>
@@ -90,36 +90,37 @@
     </section>
 
     <section id="view-history" class="view" aria-labelledby="historyTitle">
-      <div class="section-heading"><div><p class="eyebrow">History</p><h2 id="historyTitle">活動履歴</h2></div><button id="shareLatest" class="button button-secondary" type="button">最新記録を共有</button></div>
+      <div class="section-heading"><h2 id="historyTitle">活動履歴</h2><button id="shareLatest" class="button button-secondary" type="button">最新記録を共有</button></div>
       <section class="panel filters"><label>検索<input id="historySearch" type="search" placeholder="町丁目・配布物・担当者"></label><label>期間<select id="historyPeriod"><option value="all">全期間</option><option value="month">今月</option><option value="year">今年</option></select></label></section>
       <div id="historyList" class="card-list"></div>
     </section>
 
     <section id="view-map" class="view" aria-labelledby="mapTitle">
-      <div class="section-heading"><div><p class="eyebrow">Shinagawa map</p><h2 id="mapTitle">配布地図</h2></div><span id="demographicDate" class="status-badge"></span></div>
+      <div class="section-heading"><h2 id="mapTitle">配布地図</h2><span id="demographicDate" class="status-badge"></span></div>
       <section class="panel filters map-filters">
         <label>地図表示<select id="mapMetric"><option value="base">人口・世帯数</option><option value="total">累計配布枚数</option><option value="rate">世帯数に対する配布率</option><option value="days">最終配布からの経過日数</option><option value="month">今月の配布状況</option><option value="status">未配布・配布中・完了</option></select></label>
         <label>配布物<select id="mapMaterial"><option value="all">すべて</option></select></label>
         <label>期間<select id="mapPeriod"><option value="all">全期間</option><option value="month">今月</option><option value="3months">過去3カ月</option><option value="year">今年</option></select></label>
       </section>
+      <div id="mapLegend" class="map-legend" role="img" aria-label="地図の色の凡例"></div>
       <div class="map-layout"><div id="activityMap" class="map-canvas" aria-label="品川区町丁目地図"></div><aside id="mapDetail" class="panel map-detail"><h3>町丁目を選択</h3><p class="muted">境界または一覧を選ぶと詳細を表示します。</p></aside></div>
       <p class="source-note">背景地図 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> ／ 人口・世帯数：品川区</p>
     </section>
 
     <section id="view-apartments" class="view" aria-labelledby="apartmentsTitle">
-      <div class="section-heading"><div><p class="eyebrow">Apartment list</p><h2 id="apartmentsTitle">マンション</h2></div><button id="newApartmentButton" class="button button-primary" type="button">物件を登録</button></div>
+      <div class="section-heading"><h2 id="apartmentsTitle">マンション</h2><button id="newApartmentButton" class="button button-primary" type="button">物件を登録</button></div>
       <section class="panel filters apartment-filters"><label>町丁目<select id="apartmentArea"><option value="all">すべて</option></select></label><label>配布可否<select id="apartmentStatus"><option value="all">すべて</option><option value="allowed">配布可</option><option value="conditional">条件付き</option><option value="prohibited">配布禁止</option><option value="unknown">未確認</option></select></label><label>最低戸数<input id="apartmentUnits" type="number" min="0" value="100"></label><label>並び順<select id="apartmentSort"><option value="units">戸数が多い順</option><option value="area">町丁目順</option><option value="old">確認日が古い順</option></select></label></section>
       <div class="map-layout"><div id="apartmentMap" class="map-canvas" aria-label="マンション地図"></div><div id="apartmentList" class="card-list compact-list"></div></div>
     </section>
 
     <section id="view-analysis" class="view" aria-labelledby="analysisTitle">
-      <div class="section-heading"><div><p class="eyebrow">Analysis</p><h2 id="analysisTitle">分析</h2></div><div class="button-row"><button id="shareAnalysisText" class="button button-secondary" type="button">テキスト共有</button><button id="shareAnalysisImage" class="button button-primary" type="button">画像で共有</button></div></div>
+      <div class="section-heading"><h2 id="analysisTitle">分析</h2><div class="button-row"><button id="shareAnalysisText" class="button button-secondary" type="button">テキスト共有</button><button id="shareAnalysisImage" class="button button-primary" type="button">画像で共有</button></div></div>
       <section class="panel filters"><label>期間<select id="analysisPeriod"><option value="month">今月</option><option value="3months">過去3カ月</option><option value="year">今年</option><option value="all">全期間</option></select></label><label>配布物<select id="analysisMaterial"><option value="all">すべて</option></select></label></section>
       <div id="analysisReport" class="report-card"><div id="analysisStats" class="stat-grid"></div><div class="chart-grid"><section class="panel"><h3>期間別配布枚数</h3><div id="trendChart" class="bar-chart"></div></section><section class="panel"><h3>町丁目別 上位5件</h3><div id="areaRanking"></div></section><section class="panel"><h3>配布物別</h3><div id="materialBreakdown"></div></section><section class="panel"><h3>担当者別</h3><div id="workerBreakdown"></div></section></div></div>
     </section>
 
     <section id="view-settings" class="view" aria-labelledby="settingsTitle">
-      <div class="section-heading"><div><p class="eyebrow">Settings</p><h2 id="settingsTitle">設定・データ管理</h2></div></div>
+      <div class="section-heading"><h2 id="settingsTitle">設定・データ管理</h2></div>
       <div class="settings-grid">
         <section class="panel form-section account-management"><h3>活動アカウント</h3><p class="muted">候補者ごとに活動記録、目標、配布物、マンション情報を分けて管理します。</p><div id="accountList"></div><div class="inline-form"><input id="newAccountName" type="text" maxlength="60" placeholder="例：品川区長選挙 候補者A" aria-label="新しい活動アカウント名"><button id="createAccount" class="button button-primary" type="button">追加</button></div></section>
         <section class="panel form-section"><h3>月間目標</h3><label>全配布物の月間目標<input id="monthlyGoal" type="number" min="0" step="100" placeholder="30000"></label><button id="saveGoal" class="button button-primary" type="button">目標を保存</button></section>

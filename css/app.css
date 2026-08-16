@@ -16,19 +16,80 @@
    1. デザイントークン / 基盤
    ------------------------------------------------------------------ */
 :root{
-  --blue:#1557a6;
-  --blue-dark:#0e3d79;
-  --blue-soft:#eaf2fb;
-  --ink:#172033;
-  --muted:#667085;
-  --line:#d9e0ea;
+  /* --- プリミティブカラー ---------------------------------------------
+     デジタル庁デザインシステム（@digital-go-jp/design-tokens v2.0.1）の
+     公式パレットをそのまま採用する。独自に調色した中間色は作らない。
+     出典: https://design.digital.go.jp/ ／ ダッシュボード作成ガイドブック
+     -------------------------------------------------------------------- */
+  --blue-50:#e8f1fe;
+  --blue-100:#d9e6ff;
+  --blue-200:#c5d7fb;
+  --blue-300:#9db7f9;
+  --blue-500:#4979f5;
+  --blue-800:#0031d8;
+  --blue-900:#0017c1;
+  --blue-1000:#00118f;
+  /* Solid Gray。420/536 は「白背景で 3:1 / 4.5:1 を満たす限界値」として
+     デザインシステムが特別に定義しているトーン。境界線と補助文字に使う。 */
+  --gray-50:#f2f2f2;
+  --gray-100:#e6e6e6;
+  --gray-200:#cccccc;
+  --gray-420:#949494;
+  --gray-536:#767676;
+  --gray-700:#4d4d4d;
+  --gray-900:#1a1a1a;
+  --green-50:#e6f5ec;
+  --green-600:#259d63;
+  --green-800:#197a4b;
+  --orange-50:#ffeee2;
+  --orange-100:#ffdfca;
+  --orange-400:#ff8d44;
+  --orange-800:#c74700;
+  --red-50:#fdeeee;
+  --red-800:#ec0000;
+  --red-900:#ce0000;
+
+  /* --- セマンティックカラー -------------------------------------------
+     原則: 画面の骨格（ヘッダー・枠線・文字）はグレーだけで組み、
+     色は「操作できる場所」と「データ」にのみ配分する。
+     装飾目的で青を使わないことで、グラフや地図の色が埋もれなくなる。
+     -------------------------------------------------------------------- */
+  --key:var(--blue-900);           /* 主操作・リンク・選択中 */
+  --key-hover:var(--blue-1000);
+  --key-weak:var(--blue-50);       /* 主操作の淡い背景 */
+  --ink:var(--gray-900);           /* 本文 */
+  --ink-2:var(--gray-700);         /* ラベル・副次テキスト */
+  --muted:var(--gray-536);         /* 補助テキスト（白背景で 4.5:1） */
+  --line:var(--gray-200);          /* 面の輪郭 */
+  --line-weak:var(--gray-100);     /* 面の内側の区切り */
   --surface:#fff;
-  --canvas:#f4f6f9;
-  --danger:#b42318;
-  --warning:#9a6700;
-  --success:#16794a;
-  --radius:10px;
-  --shadow:0 8px 24px rgba(16,40,75,.08);
+  --canvas:var(--gray-50);
+  --danger:var(--red-800);
+  --danger-dark:var(--red-900);
+  --warning:var(--orange-800);
+  --success:var(--green-800);
+
+  /* --- データ可視化カラー ---------------------------------------------
+     連続量（配布枚数・配布率）は単一色相の濃淡で表す。色相を混ぜると
+     「多い／少ない」の順序が読めなくなるため、ガイドブックの推奨に従う。 */
+  --seq-0:var(--gray-100);         /* データなし */
+  --seq-1:var(--blue-100);
+  --seq-2:var(--blue-300);
+  --seq-3:var(--blue-500);
+  --seq-4:var(--blue-800);
+  /* 経過日数のような「古いほど注意が必要」な量はオレンジの濃淡で表す */
+  --alert-1:var(--orange-100);
+  --alert-2:var(--orange-400);
+  --alert-3:var(--orange-800);
+
+  /* --- 形状 -----------------------------------------------------------
+     角丸はデザインシステムの 4/6/8px のみ。全要素を同じ大きな角丸で
+     まとめると情報の階層が消えるため、面と部品で使い分ける。 */
+  --radius:8px;
+  --radius-s:6px;
+  --radius-xs:4px;
+  /* 影はダイアログ（前面に浮く面）だけに使い、通常のパネルは線で区切る */
+  --shadow:0 8px 24px rgba(26,26,26,.18);
   /* タップ領域の最小サイズ（WCAG 2.5.8 の推奨値） */
   --tap:44px;
   /* 端末のセーフエリア（ノッチ・ホームインジケーター）を考慮した余白 */
@@ -40,10 +101,12 @@
 *{box-sizing:border-box}
 
 html{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+  font-family:"Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif;
   color:var(--ink);
   background:var(--canvas);
   scroll-behavior:smooth;
+  /* 和文の可読性を優先し、デザインシステムの標準行間 1.7 に合わせる */
+  line-height:1.7;
   /* iOS の横向き時に文字サイズが勝手に拡大されるのを防ぐ */
   -webkit-text-size-adjust:100%;
 }
@@ -58,7 +121,18 @@ body{
 
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
-a{color:var(--blue)}
+a{color:var(--key)}
+
+/* 見出しは行間を詰める。本文の 1.7 のままだと数字と見出しが同じ密度に見え、
+   画面全体がのっぺりして情報の優先順位が伝わらなくなる。 */
+h1,h2,h3{line-height:1.4}
+
+/* 数値は必ず等幅数字にする。桁が揃わないとカードや表を横に並べたときに
+   数字の大小が視覚的に比較できなくなる（ダッシュボードでは致命的）。 */
+.stat-card strong,.list-value,.timer-panel strong,.bar-column strong,
+.ranking-row strong,.progress-copy strong,.map-detail strong{
+  font-variant-numeric:tabular-nums;
+}
 
 /* display を明示したクラス（.button など）がブラウザ既定の [hidden] を打ち消すため、
    hidden 属性を常に優先させる。JS で hidden を切り替えている要素の表示崩れを防ぐ。 */
@@ -82,15 +156,15 @@ a{color:var(--blue)}
   justify-content:space-between;
   gap:20px;
 }
-.app-header h1{font-size:1.55rem;margin:0;letter-spacing:.04em}
+.app-header h1{font-size:1.4rem;margin:0;letter-spacing:.01em}
 .app-identity{min-width:0}
-
-.eyebrow{margin:0 0 3px;color:var(--blue);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+/* 和文見出しの上に飾りの英語を置かない。補足は日本語で、役割を説明する。 */
+.app-subtitle{margin:0;color:var(--muted);font-size:.75rem;line-height:1.5}
 
 .account-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .button-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
-.account-switcher{display:flex;align-items:center;gap:7px;font-size:.76rem;white-space:nowrap;min-width:0}
+.account-switcher{display:flex;align-items:center;gap:7px;font-size:.76rem;color:var(--ink-2);white-space:nowrap;min-width:0}
 .account-switcher select{width:auto;min-width:150px;max-width:250px;padding:8px 30px 8px 10px}
 
 /* 同期状態バッジ。ログイン後は表示名が入り長くなるため必ず省略記号で丸める */
@@ -122,12 +196,15 @@ a{color:var(--blue)}
   border-bottom:3px solid transparent;
   background:transparent;
   padding:14px 13px;
-  color:var(--muted);
+  /* 未選択のタブも本文に近い濃さにする。薄いグレーだと「無効」に見え、
+     選択中との差が「色」だけになって色覚特性のある利用者に伝わらない。 */
+  color:var(--ink-2);
   font-weight:700;
   white-space:nowrap;
   scroll-snap-align:center;
 }
-.nav-item:hover,.nav-item.active{color:var(--blue);border-bottom-color:var(--blue)}
+.nav-item:hover{color:var(--key);border-bottom-color:var(--line)}
+.nav-item.active{color:var(--key);border-bottom-color:var(--key)}
 
 .app-main{
   width:min(1240px,calc(100% - 32px));
@@ -137,9 +214,21 @@ a{color:var(--blue)}
 .view{display:none}
 .view.active{display:block}
 
-.section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin:0 0 18px}
-.section-heading h2{margin:0;font-size:1.75rem}
+.section-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+  margin:0 0 18px;
+  padding-bottom:12px;
+  /* 見出しと本文の境目を線で示す。影で浮かせる代わりに罫線で区切るのが
+     ガイドブックのレイアウト方針（グリッド線に沿わせて視線を誘導する）。 */
+  border-bottom:1px solid var(--line);
+}
+/* 英字ラベルの代わりに、見出しの左に細いキーカラーの罫を置いて所在を示す */
+.section-heading h2{margin:0;font-size:1.5rem;padding-left:12px;border-left:4px solid var(--key)}
 .section-heading > p{margin:0}
+.section-heading .heading-note{margin:4px 0 0 16px;color:var(--muted);font-size:.8rem}
 
 /* ------------------------------------------------------------------
    3. 共通パーツ（ボタン・パネル・カード）
@@ -149,22 +238,28 @@ a{color:var(--blue)}
   align-items:center;
   justify-content:center;
   min-height:var(--tap);
-  border:1px solid var(--line);
-  border-radius:8px;
+  border:1px solid var(--gray-420);
+  border-radius:var(--radius-s);
   padding:10px 15px;
-  background:#fff;
+  background:var(--surface);
   color:var(--ink);
   font-weight:700;
+  line-height:1.4;
   text-decoration:none;
   text-align:center;
 }
-.button:hover{border-color:#9db5d4}
-.button:disabled{opacity:.45;cursor:not-allowed}
-.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}
-.button-primary:hover{background:var(--blue-dark)}
-.button-secondary{background:var(--blue-soft);border-color:#c5d9f1;color:var(--blue-dark)}
-.button-quiet{background:#fff}
+.button:hover{background:var(--gray-50);border-color:var(--gray-536)}
+.button:disabled{opacity:.4;cursor:not-allowed}
+.button:disabled:hover{background:var(--surface);border-color:var(--gray-420)}
+/* 主操作は塗り、副次操作は枠線のみ。同じ画面で「塗り」を複数使うと
+   どれが本命の操作か分からなくなるため、塗りは 1 画面 1 系統に絞る。 */
+.button-primary{background:var(--key);border-color:var(--key);color:#fff}
+.button-primary:hover{background:var(--key-hover);border-color:var(--key-hover)}
+.button-secondary{background:var(--surface);border-color:var(--key);color:var(--key)}
+.button-secondary:hover{background:var(--key-weak)}
+.button-quiet{background:var(--surface)}
 .button-danger{color:#fff;background:var(--danger);border-color:var(--danger)}
+.button-danger:hover{background:var(--danger-dark);border-color:var(--danger-dark)}
 .button-small{padding:7px 10px;font-size:.86rem;min-height:38px}
 .action-button{padding:16px;font-size:1rem;min-height:56px}
 
@@ -175,55 +270,68 @@ a{color:var(--blue)}
   padding:0 2px;
   border:0;
   background:transparent;
-  color:var(--blue);
+  color:var(--key);
   font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:3px;
 }
 
 .icon-button{
   width:var(--tap);
   height:var(--tap);
   flex:0 0 auto;
-  border:1px solid var(--line);
-  background:#fff;
-  border-radius:7px;
+  border:1px solid var(--gray-420);
+  background:var(--surface);
+  border-radius:var(--radius-s);
   font-size:1.25rem;
   line-height:1;
 }
+.icon-button:hover{background:var(--gray-50)}
 
 /* グリッドのトラックは必ず minmax(0,…) で最小値を 0 にする。
    既定の 1fr（= minmax(auto,1fr)）だと中身の max-content まで広がり、
    長いグラフや長文がページ全体を横に押し広げてしまうため。 */
 .action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
 
-.status-badge{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:6px;background:var(--blue-soft);color:var(--blue-dark);font-size:.78rem;font-weight:700}
+/* 状態バッジは無彩色を既定にする。常時表示される要素に色を付けると
+   「今この画面で色が付いているもの＝注目すべきもの」という約束が崩れる。 */
+.status-badge{display:inline-flex;align-items:center;min-height:28px;padding:5px 9px;border-radius:var(--radius-xs);background:var(--gray-50);border:1px solid var(--line);color:var(--ink-2);font-size:.78rem;font-weight:700;line-height:1.4}
+.status-badge.is-synced{background:var(--green-50);border-color:var(--green-600);color:var(--success)}
+.status-badge.is-running{background:var(--key-weak);border-color:var(--key);color:var(--key)}
 
 .stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-.stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(16,40,75,.03)}
-.stat-card span{display:block;color:var(--muted);font-size:.82rem}
-.stat-card strong{display:block;font-size:1.6rem;margin-top:5px}
+/* 数値カード：ラベル（小・グレー）→ 数値（大・等幅）→ 単位（小）の順に
+   視線が落ちるようにする。数値と単位を同じ大きさで並べると桁が読みにくい。 */
+.stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xs);padding:16px}
+.stat-card span{display:block;color:var(--muted);font-size:.8rem;line-height:1.5}
+.stat-card strong{display:block;font-size:1.9rem;font-weight:700;line-height:1.2;margin-top:6px;letter-spacing:-.01em}
+.stat-card .unit{display:inline;margin-left:3px;color:var(--ink-2);font-size:.9rem;font-weight:700}
 
-.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 2px 9px rgba(16,40,75,.03)}
-.panel h3{margin:0 0 13px;font-size:1.03rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xs);padding:18px}
+.panel h3{margin:0 0 13px;font-size:1rem}
 .panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .panel-heading h3,.panel-heading h2{margin:0}
 
 .goal-panel{margin-bottom:16px}
-.progress-track{height:10px;background:#e8edf4;border-radius:2px;overflow:hidden}
-.progress-value{height:100%;background:var(--blue)}
-.progress-copy{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.progress-track{height:12px;background:var(--gray-100);border-radius:var(--radius-xs);overflow:hidden}
+.progress-value{height:100%;background:var(--key)}
+.progress-copy{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.progress-copy strong{font-size:1.25rem}
 
 .two-column,.chart-grid,.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 
-.empty-state{padding:24px 8px;text-align:center;color:var(--muted)}
+.empty-state{padding:24px 8px;text-align:center;color:var(--muted);font-size:.9rem}
 
-.list-row{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+/* 面の内側の区切りは --line より薄い線を使う。外周と同じ濃さだと
+   1 枚のパネルが複数のカードに分裂して見える。 */
+.list-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line-weak)}
 .list-row:last-child{border-bottom:0}
-.list-row p{margin:3px 0 0}
+.list-row p{margin:2px 0 0;color:var(--muted);font-size:.83rem}
 .list-row > div{min-width:0}
 .list-value{text-align:right;white-space:nowrap;flex:0 0 auto}
 
 .card-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
-.activity-card,.apartment-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px;display:grid;gap:8px}
+.activity-card,.apartment-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xs);padding:15px;display:grid;gap:8px}
 .activity-card-header,.apartment-card-header{display:flex;justify-content:space-between;gap:12px}
 .activity-card-header > div,.apartment-card-header > div{min-width:0}
 /* 右端の枚数・配布可否は物件名が長くても折り返さないようにする */
@@ -231,8 +339,10 @@ a{color:var(--blue)}
 .activity-card h3,.apartment-card h3{margin:0;font-size:1rem;overflow-wrap:anywhere}
 .meta-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:.85rem}
 
-.notice{padding:13px;border-radius:8px}
-.warning{background:#fff7df;color:#6f4f00;border:1px solid #f0d68a}
+/* 注意喚起は左端の太い罫で示す。塗りつぶしだけだと、白黒印刷や
+   色覚特性のある環境で通常のパネルと区別できなくなる。 */
+.notice{padding:13px 13px 13px 15px;border-radius:var(--radius-xs);font-size:.9rem}
+.warning{background:var(--orange-50);color:var(--warning);border:1px solid var(--orange-100);border-left:4px solid var(--orange-800)}
 
 .source-note{font-size:.78rem;color:var(--muted)}
 
@@ -243,24 +353,33 @@ a{color:var(--blue)}
 .form-section{display:grid;grid-template-columns:minmax(0,1fr);gap:13px}
 .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 
-label{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;color:#344054;font-size:.86rem;font-weight:700}
+label{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;color:var(--ink-2);font-size:.86rem;font-weight:700;line-height:1.5}
 
 input,select,textarea{
   width:100%;
   min-width:0;
-  border:1px solid #bfc8d5;
-  border-radius:7px;
-  background:#fff;
+  /* 枠線は 3:1 を満たす gray-420。これより薄いと入力欄の存在自体が
+     ロービジョン環境で認識できない（ガイドの非テキストコントラスト要件）。 */
+  border:1px solid var(--gray-420);
+  border-radius:var(--radius-xs);
+  background:var(--surface);
   color:var(--ink);
   padding:10px 11px;
   /* 16px を下回ると iOS Safari がフォーカス時にページを自動拡大してしまうため固定 */
   font-size:1rem;
+  line-height:1.5;
 }
-input:focus,select:focus,textarea:focus{outline:3px solid rgba(21,87,166,.18);border-color:var(--blue)}
+/* フォーカスリングは半透明にせず、キーカラーの実線 2 本で示す。
+   薄い影は背景色によって見えなくなることがある。 */
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--key);
+  outline-offset:1px;
+  border-color:var(--key);
+}
 textarea{resize:vertical}
 
 /* 配布物・町丁目の繰り返し入力行 */
-.repeat-row{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}
+.repeat-row{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line-weak)}
 .area-repeat-row{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto}
 
 .form-actions{display:flex;justify-content:flex-end;gap:10px}
@@ -282,22 +401,46 @@ textarea{resize:vertical}
 
 /* 地図・マンション */
 .map-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:16px}
-.map-canvas{height:590px;border:1px solid var(--line);border-radius:var(--radius);background:#e6edf5;overflow:hidden}
+.map-canvas{height:590px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--gray-100);overflow:hidden}
 .map-detail{height:max-content}
 .compact-list{max-height:590px;overflow:auto}
 
+/* 凡例。塗り分けた地図に凡例がないと、色が何を意味するのか読み手が
+   推測するしかない。ガイドブックが必須としている要素。 */
+.map-legend{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px 16px;
+  margin-bottom:12px;
+  padding:11px 14px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius-xs);
+  font-size:.8rem;
+}
+.map-legend-title{color:var(--ink-2);font-weight:700}
+.map-legend-item{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);white-space:nowrap}
+.map-legend-swatch{width:20px;height:12px;flex:0 0 auto;border:1px solid var(--gray-420);border-radius:2px}
+
+/* 配布可否は色に加えて記号を前置し、色だけに依存しないようにする */
 .posting-allowed{color:var(--success)}
 .posting-prohibited{color:var(--danger)}
 .posting-conditional{color:var(--warning)}
+.posting-allowed::before{content:"● "}
+.posting-prohibited::before{content:"■ "}
+.posting-conditional::before{content:"▲ "}
+.posting-unknown::before{content:"○ ";color:var(--muted)}
+.posting-unknown{color:var(--muted)}
 
 .leaflet-container{font:inherit}
-.map-label{background:#fff;border:1px solid #8aa6c9;border-radius:3px;color:#173f70;font-size:10px;font-weight:700;padding:2px 4px;box-shadow:none}
+.map-label{background:var(--surface);border:1px solid var(--gray-420);border-radius:2px;color:var(--ink);font-size:10px;font-weight:700;padding:2px 4px;box-shadow:none}
 .map-label:before{display:none}
 
-.current-location-control{background:#fff}
-.current-location-button{display:block;min-width:92px;height:34px;border:0;background:#fff;color:var(--blue-dark);font-weight:700;padding:0 10px;white-space:nowrap}
-.current-location-button:hover{background:var(--blue-soft)}
-.current-location-button:focus-visible{outline:3px solid rgba(21,87,166,.35);outline-offset:1px}
+.current-location-control{background:var(--surface)}
+.current-location-button{display:block;min-width:92px;height:34px;border:0;background:var(--surface);color:var(--key);font-weight:700;padding:0 10px;white-space:nowrap}
+.current-location-button:hover{background:var(--key-weak)}
+.current-location-button:focus-visible{outline:2px solid var(--key);outline-offset:1px}
 .current-location-button:disabled{color:var(--muted);cursor:wait}
 
 /* 分析 */
@@ -317,35 +460,42 @@ textarea{resize:vertical}
   scrollbar-width:thin;
 }
 .bar-column{flex:1 0 44px;text-align:center}
-.bar{background:var(--blue);min-height:2px;border-radius:3px 3px 0 0}
-.bar-column strong{font-size:.82rem;white-space:nowrap}
-.bar-column small{display:block;color:var(--muted);font-size:.68rem;margin-top:6px;white-space:nowrap}
+/* 棒グラフは角丸にしない。先端を丸めると棒の長さ＝量の対応が崩れて
+   わずかに短く見えるため、量的な比較を目的とする図では角を残す。 */
+.bar{background:var(--seq-4);min-height:2px}
+.bar-column strong{display:block;font-size:.8rem;font-weight:700;white-space:nowrap;margin-bottom:4px}
+.bar-column small{display:block;color:var(--muted);font-size:.7rem;margin-top:6px;white-space:nowrap}
 .bar-chart .empty-state{margin:auto;flex:1 0 auto}
 
 .ranking-row{display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr) auto;align-items:center;gap:10px;margin:10px 0}
-.ranking-row > span{min-width:0;overflow-wrap:anywhere}
-.mini-track{height:8px;background:#edf0f4}
-.mini-value{height:100%;background:var(--blue)}
+.ranking-row > span{min-width:0;overflow-wrap:anywhere;font-size:.9rem}
+.ranking-row > strong{font-size:.92rem}
+/* 順位表は「量の比較」なので単一色。項目ごとに色を変えると、色の違いに
+   意味があるように見えてしまう。 */
+.mini-track{height:10px;background:var(--gray-100);border-radius:2px;overflow:hidden}
+.mini-value{height:100%;background:var(--seq-4)}
 
 /* 設定 */
 .settings-grid{align-items:start}
 .account-management{grid-column:1/-1}
-.account-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.account-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line-weak)}
 .account-row:last-child{border-bottom:0}
 .account-row input{min-width:0}
-.account-row-current{grid-column:1/-1;color:var(--blue);font-size:.76rem;font-weight:700}
-.danger-zone{border-color:#f0b8b2;background:#fffafa}
+.account-row-current{grid-column:1/-1;color:var(--key);font-size:.76rem;font-weight:700}
+/* 取り消せない操作の領域。左端の太い赤罫で「ここから先は危険」を明示する */
+.danger-zone{border-color:var(--line);border-left:4px solid var(--danger);background:var(--red-50)}
+.danger-zone h3{color:var(--danger-dark)}
 
 /* ------------------------------------------------------------------
    6. ダイアログ・トースト
    ------------------------------------------------------------------ */
-dialog{width:min(760px,calc(100% - 30px));max-height:90vh;border:0;border-radius:12px;padding:0;box-shadow:var(--shadow)}
-dialog::backdrop{background:rgba(12,25,45,.55)}
+dialog{width:min(760px,calc(100% - 30px));max-height:90vh;border:0;border-radius:var(--radius);padding:0;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(26,26,26,.6)}
 .dialog-form{padding:20px;display:grid;gap:13px}
 
 /* タイトルと保存ボタンは長いフォームをスクロールしても常に見えるようにする */
-.dialog-form > .panel-heading{position:sticky;top:0;z-index:2;background:#fff;padding:4px 0 10px;margin:-4px 0 0;border-bottom:1px solid var(--line)}
-.dialog-form > .form-actions{position:sticky;bottom:0;z-index:2;background:#fff;padding:12px 0 4px;margin-bottom:-4px;border-top:1px solid var(--line)}
+.dialog-form > .panel-heading{position:sticky;top:0;z-index:2;background:var(--surface);padding:4px 0 10px;margin:-4px 0 0;border-bottom:1px solid var(--line)}
+.dialog-form > .form-actions{position:sticky;bottom:0;z-index:2;background:var(--surface);padding:12px 0 4px;margin-bottom:-4px;border-top:1px solid var(--line)}
 
 .toast{
   position:fixed;
@@ -354,10 +504,10 @@ dialog::backdrop{background:rgba(12,25,45,.55)}
   bottom:calc(18px + env(safe-area-inset-bottom));
   z-index:1000;
   max-width:min(360px,calc(100vw - 36px));
-  background:#172033;
+  background:var(--gray-900);
   color:#fff;
   padding:12px 16px;
-  border-radius:8px;
+  border-radius:var(--radius-xs);
   opacity:0;
   transform:translateY(10px);
   pointer-events:none;
@@ -397,7 +547,7 @@ dialog::backdrop{background:rgba(12,25,45,.55)}
     min-height:0;
     padding:10px var(--safe-right) 10px var(--safe-left);
   }
-  .app-header .eyebrow{display:none}
+  .app-header .app-subtitle{display:none}
   .app-header h1{font-size:1.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .app-identity{grid-area:title}
   .account-area{display:contents}
@@ -443,7 +593,7 @@ dialog::backdrop{background:rgba(12,25,45,.55)}
     grid-template-columns:repeat(2,minmax(0,1fr));
     border:1px solid var(--line);
     border-radius:var(--radius);
-    background:#fbfcfe;
+    background:var(--gray-50);
     padding:14px;
   }
   .repeat-row + .repeat-row{margin-top:10px}
@@ -525,10 +675,16 @@ dialog::backdrop{background:rgba(12,25,45,.55)}
   .bar-chart{overflow:visible}
 }
 
-/* キーボード操作時のフォーカスを全ての操作要素で見えるようにする */
+/* キーボード操作時のフォーカスを全ての操作要素で見えるようにする。
+   半透明ではなくキーカラーの実線にして、どんな背景の上でも同じ強さで見せる。 */
 button:focus-visible,a:focus-visible,[tabindex]:focus-visible{
-  outline:3px solid rgba(21,87,166,.45);
+  outline:2px solid var(--key);
   outline-offset:2px;
+}
+/* 濃い塗りのボタンは同色のリングが埋もれるため、白い縁取りを挟む */
+.button-primary:focus-visible,.button-danger:focus-visible{
+  outline-offset:2px;
+  box-shadow:0 0 0 2px var(--surface);
 }
 
 /* 視差効果を減らす設定の端末ではアニメーションを止める */

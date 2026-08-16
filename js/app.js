@@ -58,9 +58,9 @@ function addCurrentLocationControl(map) {
     if (locationMarker) locationMarker.remove();
     accuracyCircle = L.circle(event.latlng, {
       radius: event.accuracy,
-      color: "#1557a6",
+      color: "#0017c1",
       weight: 1,
-      fillColor: "#4c86c5",
+      fillColor: "#4979f5",
       fillOpacity: .12,
       interactive: false
     }).addTo(map);
@@ -68,7 +68,7 @@ function addCurrentLocationControl(map) {
       radius: 8,
       color: "#ffffff",
       weight: 3,
-      fillColor: "#1557a6",
+      fillColor: "#0017c1",
       fillOpacity: 1
     }).bindTooltip("現在地").addTo(map);
     map.setView(event.latlng, Math.max(map.getZoom(), 16));
@@ -91,6 +91,14 @@ function addCurrentLocationControl(map) {
     };
     toast(messages[event.code] || "現在地を取得できませんでした。");
   });
+}
+
+// 同期バッジ。既定は無彩色で、同期できている間だけ緑にする。
+// 常に色が付いていると「色 = 注目すべき状態」という手がかりが機能しなくなる。
+function setSyncBadge(label, synced) {
+  const badge = $("#syncBadge");
+  badge.textContent = label;
+  badge.classList.toggle("is-synced", Boolean(synced));
 }
 
 function toast(message) {
@@ -156,8 +164,11 @@ function navigate(view) {
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
-function statCard(label, value, suffix = "") {
-  return `<article class="stat-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}${suffix}</strong></article>`;
+// 数値カード。単位は数値と別要素にして小さく表示する。
+// 「30,000枚」を同じ大きさで並べると、桁数を目で追うときに単位が邪魔になる。
+function statCard(label, value, unit = "") {
+  const unitMarkup = unit ? `<span class="unit">${escapeHtml(unit)}</span>` : "";
+  return `<article class="stat-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}${unitMarkup}</strong></article>`;
 }
 
 function renderHome() {
@@ -298,6 +309,7 @@ function startTimer() {
   $("#startTime").value = timerStarted.toTimeString().slice(0, 5);
   $("#timerToggle").textContent = "終了";
   $("#timerStatus").textContent = "計測中";
+  $("#timerStatus").classList.add("is-running");
   $("#timerStartedAt").textContent = `${$("#startTime").value}に開始`;
   timerInterval = setInterval(updateTimer, 1000);
   updateTimer();
@@ -315,7 +327,7 @@ function stopTimer(setEnd = true) {
   if (!timerStarted) return;
   if (setEnd) $("#endTime").value = new Date().toTimeString().slice(0, 5);
   clearInterval(timerInterval); timerInterval = null; timerStarted = null;
-  $("#timerToggle").textContent = "開始"; $("#timerStatus").textContent = "停止中"; $("#timerDisplay").textContent = "00:00:00"; $("#timerStartedAt").textContent = "開始ボタンを押すと計測します";
+  $("#timerToggle").textContent = "開始"; $("#timerStatus").textContent = "停止中"; $("#timerStatus").classList.remove("is-running"); $("#timerDisplay").textContent = "00:00:00"; $("#timerStartedAt").textContent = "開始ボタンを押すと計測します";
 }
 
 function renderHistory() {
@@ -406,15 +418,101 @@ function metricForArea(name) {
   return { ...result, rate, days, demographic, metric };
 }
 
+/* -------------------------------------------------------------------------
+   地図の塗り分け尺度
+   デジタル庁デザインシステムのパレットのみを使う。
+   ・配布枚数や配布率のような「多い／少ない」を比べる量 … Blue の濃淡（SEQUENTIAL）
+     色相を混ぜると順序が読めなくなるため、明度だけを変える。
+   ・最終配布からの経過日数のような「放置するほど困る」量 … Orange の濃淡
+   ・進捗の区分だけは順序付きのカテゴリなので、灰→青→緑で段階を表す。
+   区切り値（bucket に渡すしきい値）は活動量に合わせて調整する箇所。
+   ------------------------------------------------------------------------- */
+const MAP_NO_DATA = "#e6e6e6";                                  /* gray-100 */
+const MAP_SEQ = ["#d9e6ff", "#9db7f9", "#4979f5", "#0031d8"];   /* blue 100/300/500/800 */
+const MAP_ALERT = ["#ffdfca", "#ff8d44", "#c74700"];            /* orange 100/400/800 */
+
+// number がしきい値を上から何段目まで超えているかを返す（0 = どれにも達していない）
+function bucket(number, thresholds) {
+  let index = 0;
+  thresholds.forEach((threshold, position) => { if (number >= threshold) index = position + 1; });
+  return index;
+}
+
+const MAP_SCALES = {
+  base: {
+    title: "町丁目の範囲",
+    bins: [{ label: "品川区の町丁目", color: MAP_SEQ[0] }],
+    pick: () => 0
+  },
+  total: {
+    title: "累計配布枚数",
+    bins: [
+      { label: "記録なし", color: MAP_NO_DATA },
+      { label: "500枚未満", color: MAP_SEQ[0] },
+      { label: "500〜1,999枚", color: MAP_SEQ[1] },
+      { label: "2,000〜4,999枚", color: MAP_SEQ[2] },
+      { label: "5,000枚以上", color: MAP_SEQ[3] }
+    ],
+    pick: (value) => bucket(value.total, [1, 500, 2000, 5000])
+  },
+  month: {
+    title: "今月の配布枚数",
+    // 1カ月ぶんは累計より桁が小さいため、区切りを下げないと全域が淡色になる
+    bins: [
+      { label: "記録なし", color: MAP_NO_DATA },
+      { label: "200枚未満", color: MAP_SEQ[0] },
+      { label: "200〜599枚", color: MAP_SEQ[1] },
+      { label: "600〜1,499枚", color: MAP_SEQ[2] },
+      { label: "1,500枚以上", color: MAP_SEQ[3] }
+    ],
+    pick: (value) => bucket(value.total, [1, 200, 600, 1500])
+  },
+  rate: {
+    title: "世帯数に対する配布率",
+    bins: [
+      { label: "記録なし", color: MAP_NO_DATA },
+      { label: "20%未満", color: MAP_SEQ[0] },
+      { label: "20〜49%", color: MAP_SEQ[1] },
+      { label: "50〜79%", color: MAP_SEQ[2] },
+      { label: "80%以上", color: MAP_SEQ[3] }
+    ],
+    pick: (value) => bucket(value.rate, [0.01, 20, 50, 80])
+  },
+  days: {
+    title: "最終配布からの経過日数",
+    bins: [
+      { label: "配布記録なし", color: MAP_NO_DATA },
+      { label: "30日以内", color: MAP_ALERT[0] },
+      { label: "31〜90日", color: MAP_ALERT[1] },
+      { label: "91日以上", color: MAP_ALERT[2] }
+    ],
+    pick: (value) => (value.days === null ? 0 : bucket(value.days, [0, 31, 91]))
+  },
+  status: {
+    title: "配布の進捗",
+    bins: [
+      { label: "未配布", color: MAP_NO_DATA },
+      { label: "配布中", color: MAP_SEQ[1] },
+      { label: "配布完了（世帯数の80%以上）", color: "#259d63" } /* green-600 */
+    ],
+    pick: (value) => (value.total === 0 ? 0 : value.rate >= 80 ? 2 : 1)
+  }
+};
+
+function mapScale(metric) {
+  return MAP_SCALES[metric] || MAP_SCALES.total;
+}
+
 function mapColor(value) {
-  const metric = value.metric;
-  if (metric === "base") return "#dbe9f8";
-  if (metric === "status") return value.total === 0 ? "#e5e7eb" : value.rate >= 80 ? "#257a4f" : "#f0b44d";
-  const number = metric === "rate" ? value.rate : metric === "days" ? (value.days === null ? 999 : value.days) : value.total;
-  if (metric === "days") return number > 90 ? "#d65f4a" : number > 30 ? "#f0b44d" : "#4a83c1";
-  if (number <= 0) return "#edf1f5";
-  if (metric === "rate") return number >= 80 ? "#1557a6" : number >= 40 ? "#4c86c5" : "#a8c7e8";
-  return number >= 2000 ? "#1557a6" : number >= 500 ? "#4c86c5" : "#a8c7e8";
+  const scale = mapScale(value.metric);
+  return scale.bins[scale.pick(value)].color;
+}
+
+// 凡例。色を塗った以上、その色が何を意味するかを必ず画面上に置く。
+function renderMapLegend() {
+  const scale = mapScale($("#mapMetric").value);
+  const items = scale.bins.map((bin) => `<span class="map-legend-item"><span class="map-legend-swatch" style="background:${bin.color}"></span>${escapeHtml(bin.label)}</span>`).join("");
+  $("#mapLegend").innerHTML = `<span class="map-legend-title">${escapeHtml(scale.title)}</span>${items}`;
 }
 
 function renderMapDetail(name) {
@@ -426,6 +524,8 @@ function renderMapDetail(name) {
 }
 
 async function renderActivityMap() {
+  // 凡例は地図の描画に依存しないため、Leaflet が読み込めない環境でも先に出す
+  renderMapLegend();
   if (!window.L) return;
   if (!activityMap) {
     activityMap = L.map("activityMap", { zoomControl: true }).setView([35.609, 139.73], 13);
@@ -437,7 +537,9 @@ async function renderActivityMap() {
   const geoJson = await loadTownGeometry();
   if (!geoJson) return;
   townLayer = L.geoJSON(geoJson, {
-    style: (feature) => ({ color: "#4f6f95", weight: 1, fillColor: mapColor(metricForArea(normalizedFeatureName(feature))), fillOpacity: .7 }),
+    // 境界線は無彩色にする。境界に色を付けると塗りの色と干渉して、
+    // 隣り合う町丁目の濃淡差が読み取れなくなる。
+    style: (feature) => ({ color: "#767676", weight: .8, fillColor: mapColor(metricForArea(normalizedFeatureName(feature))), fillOpacity: .8 }),
     onEachFeature: (feature, layer) => {
       const name = normalizedFeatureName(feature);
       layer.bindTooltip(name, { sticky: true });
@@ -459,8 +561,10 @@ function renderApartments() {
   $("#apartmentList").innerHTML = items.length ? items.map((item) => `<article class="apartment-card"><div class="apartment-card-header"><div><h3>${escapeHtml(item.name)}</h3><div class="meta-row"><span>${escapeHtml(item.area)}</span><span>${yen.format(item.units)}戸</span></div></div><strong class="posting-${item.postingStatus}">${POSTING_LABELS[item.postingStatus]}</strong></div><p>${escapeHtml(item.reason || item.address || "詳細未入力")}</p><div class="meta-row"><span>確認日 ${item.checkedAt || "未確認"}</span><span>${item.confidence === "verified" ? "確認済み" : item.confidence === "review" ? "要再確認" : "候補"}</span></div><button class="button button-small" data-edit-apartment="${item.id}" type="button">詳細・編集</button></article>`).join("") : '<p class="panel empty-state">条件に合うマンションはありません。</p>';
 }
 
+// 配布可否のマーカー色（green-800 / red-900 / orange-800 / gray-536）。
+// 地図上は色しか手がかりがないため、いずれも白背景で 4.5:1 以上を満たす濃さを選ぶ。
 function postingMarkerColor(status) {
-  return status === "allowed" ? "#16794a" : status === "prohibited" ? "#b42318" : status === "conditional" ? "#9a6700" : "#667085";
+  return status === "allowed" ? "#197a4b" : status === "prohibited" ? "#ce0000" : status === "conditional" ? "#c74700" : "#767676";
 }
 
 function renderApartmentMap() {
@@ -547,16 +651,16 @@ function analysisShareText() {
 function createReportCanvas() {
   const { activities, total, minutes } = analysisData();
   const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
-  const context = canvas.getContext("2d"); context.fillStyle = "#f4f6f9"; context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#1557a6"; context.fillRect(0, 0, canvas.width, 170);
+  const context = canvas.getContext("2d"); context.fillStyle = "#f2f2f2"; context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#0017c1"; context.fillRect(0, 0, canvas.width, 170);
   context.fillStyle = "#fff"; context.font = "700 52px sans-serif"; context.fillText("ポス活ログ 活動レポート", 70, 90); context.font = "28px sans-serif"; context.fillText($("#analysisPeriod").selectedOptions[0].textContent, 70, 136);
   const cards = [["配布枚数", `${yen.format(total)}枚`], ["活動時間", `${(minutes / 60).toFixed(1)}時間`], ["活動回数", `${activities.length}回`], ["1時間あたり", `${minutes ? yen.format(Math.round(total / minutes * 60)) : 0}枚`]];
-  cards.forEach(([label, value], index) => { const x = 60 + index % 2 * 500; const y = 220 + Math.floor(index / 2) * 180; context.fillStyle = "#fff"; context.fillRect(x, y, 460, 145); context.fillStyle = "#667085"; context.font = "26px sans-serif"; context.fillText(label, x + 30, y + 45); context.fillStyle = "#172033"; context.font = "700 48px sans-serif"; context.fillText(value, x + 30, y + 110); });
+  cards.forEach(([label, value], index) => { const x = 60 + index % 2 * 500; const y = 220 + Math.floor(index / 2) * 180; context.fillStyle = "#fff"; context.fillRect(x, y, 460, 145); context.fillStyle = "#767676"; context.font = "26px sans-serif"; context.fillText(label, x + 30, y + 45); context.fillStyle = "#1a1a1a"; context.font = "700 48px sans-serif"; context.fillText(value, x + 30, y + 110); });
   const areaTotals = new Map(); activities.forEach((activity) => activity.areas.forEach((area) => areaTotals.set(area.area, (areaTotals.get(area.area) || 0) + area.distributed)));
   const entries = [...areaTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5); const max = entries[0]?.[1] || 1;
-  context.fillStyle = "#172033"; context.font = "700 36px sans-serif"; context.fillText("町丁目別 上位5件", 70, 650);
-  entries.forEach(([name, value], index) => { const y = 710 + index * 105; context.fillStyle = "#344054"; context.font = "28px sans-serif"; context.fillText(name, 70, y); context.fillStyle = "#e3e9f1"; context.fillRect(300, y - 28, 560, 34); context.fillStyle = "#1557a6"; context.fillRect(300, y - 28, 560 * value / max, 34); context.fillStyle = "#172033"; context.font = "700 26px sans-serif"; context.fillText(`${yen.format(value)}枚`, 880, y); });
-  context.fillStyle = "#667085"; context.font = "24px sans-serif"; context.fillText("個人名・肩書・政党名・マンション情報は含まれていません", 70, 1290);
+  context.fillStyle = "#1a1a1a"; context.font = "700 36px sans-serif"; context.fillText("町丁目別 上位5件", 70, 650);
+  entries.forEach(([name, value], index) => { const y = 710 + index * 105; context.fillStyle = "#4d4d4d"; context.font = "28px sans-serif"; context.fillText(name, 70, y); context.fillStyle = "#e6e6e6"; context.fillRect(300, y - 28, 560, 34); context.fillStyle = "#0017c1"; context.fillRect(300, y - 28, 560 * value / max, 34); context.fillStyle = "#1a1a1a"; context.font = "700 26px sans-serif"; context.fillText(`${yen.format(value)}枚`, 880, y); });
+  context.fillStyle = "#767676"; context.font = "24px sans-serif"; context.fillText("個人名・肩書・政党名・マンション情報は含まれていません", 70, 1290);
   return canvas;
 }
 
@@ -719,9 +823,9 @@ function bindEvents() {
 async function init() {
   $("#todayLabel").textContent = dateFormat.format(new Date()); $("#demographicDate").textContent = `${DEMOGRAPHICS_AS_OF}現在`; resetActivityForm(); bindEvents(); store.subscribe(renderAll); renderAll();
   const firebase = await firebaseAdapter.init();
-  if (firebase.configured) { $("#firebaseStatus").textContent = "Firebase設定を読み込みました。Googleログインすると複数端末で同期します。"; $("#syncBadge").textContent = "ログイン待ち"; } else { $("#loginButton").textContent = "Firebase設定が必要"; }
-  window.addEventListener("poskatsu-auth", (event) => { const user = event.detail.user; $("#loginButton").textContent = user ? "ログアウト" : "Googleでログイン"; $("#syncBadge").textContent = user ? `${user.displayName || "Googleアカウント"}・同期中` : "端末内保存"; renderAll(); });
-  window.addEventListener("poskatsu-sync", (event) => { $("#syncBadge").textContent = event.detail.status === "synced" ? "同期済み" : "同期エラー"; });
+  if (firebase.configured) { $("#firebaseStatus").textContent = "Firebase設定を読み込みました。Googleログインすると複数端末で同期します。"; setSyncBadge("ログイン待ち", false); } else { $("#loginButton").textContent = "Firebase設定が必要"; }
+  window.addEventListener("poskatsu-auth", (event) => { const user = event.detail.user; $("#loginButton").textContent = user ? "ログアウト" : "Googleでログイン"; setSyncBadge(user ? `${user.displayName || "Googleアカウント"}・同期中` : "端末内保存", Boolean(user)); renderAll(); });
+  window.addEventListener("poskatsu-sync", (event) => { const synced = event.detail.status === "synced"; setSyncBadge(synced ? "同期済み" : "同期エラー", synced); });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch(console.error);
   console.info(BOUNDARY_CREDIT);
 }
