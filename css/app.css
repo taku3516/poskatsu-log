@@ -30,24 +30,29 @@
   --blue-900:#0017c1;
   --blue-1000:#00118f;
   /* Solid Gray。420/536 は「白背景で 3:1 / 4.5:1 を満たす限界値」として
-     デザインシステムが特別に定義しているトーン。境界線と補助文字に使う。 */
+     デザインシステムが特別に定義しているトーン。境界線に使う。
+     ただし文字色は 536 を使わない（下の --muted の注記を参照）。 */
   --gray-50:#f2f2f2;
   --gray-100:#e6e6e6;
   --gray-200:#cccccc;
   --gray-420:#949494;
   --gray-536:#767676;
+  --gray-600:#666666;
   --gray-700:#4d4d4d;
   --gray-900:#1a1a1a;
   --green-50:#e6f5ec;
   --green-600:#259d63;
   --green-800:#197a4b;
+  --green-900:#115a36;
   --orange-50:#ffeee2;
   --orange-100:#ffdfca;
   --orange-400:#ff8d44;
   --orange-800:#c74700;
+  --orange-900:#ac3e00;
   --red-50:#fdeeee;
   --red-800:#ec0000;
   --red-900:#ce0000;
+  --red-1000:#a90000;
 
   /* --- セマンティックカラー -------------------------------------------
      原則: 画面の骨格（ヘッダー・枠線・文字）はグレーだけで組み、
@@ -59,15 +64,21 @@
   --key-weak:var(--blue-50);       /* 主操作の淡い背景 */
   --ink:var(--gray-900);           /* 本文 */
   --ink-2:var(--gray-700);         /* ラベル・副次テキスト */
-  --muted:var(--gray-536);         /* 補助テキスト（白背景で 4.5:1） */
+  /* 文字色は「白の上で 4.5:1」では足りない。--canvas(#f2f2f2) や
+     --gray-100、各50番の淡い地の上にも同じ文字が載るため、そこで
+     基準を割る。実測すると gray-536 は canvas 上で 4.06:1、
+     orange-800 は orange-50 上で 4.29:1 まで落ちていた。
+     いずれも一段濃いトーンにして、白・グレー・淡色のどの地でも
+     4.5:1 を満たすようにしている。 */
+  --muted:var(--gray-600);         /* 白5.74:1 / canvas5.13:1 / gray-100 4.60:1 */
   --line:var(--gray-200);          /* 面の輪郭 */
   --line-weak:var(--gray-100);     /* 面の内側の区切り */
   --surface:#fff;
   --canvas:var(--gray-50);
-  --danger:var(--red-800);
-  --danger-dark:var(--red-900);
-  --warning:var(--orange-800);
-  --success:var(--green-800);
+  --danger:var(--red-900);
+  --danger-dark:var(--red-1000);
+  --warning:var(--orange-900);
+  --success:var(--green-900);
 
   /* --- データ可視化カラー ---------------------------------------------
      連続量（配布枚数・配布率）は単一色相の濃淡で表す。色相を混ぜると
@@ -434,6 +445,10 @@ textarea{resize:vertical}
 .posting-unknown{color:var(--muted)}
 
 .leaflet-container{font:inherit}
+/* Leaflet 既定の帰属表示は水色リンク(#0078a8)を半透明の白地に置くため、
+   タイルが透けると 3.96:1 まで落ちる。地を不透明にしてリンク色も揃える。 */
+.leaflet-control-attribution{background:var(--surface)!important;color:var(--ink-2)}
+.leaflet-control-attribution a{color:var(--key)}
 .map-label{background:var(--surface);border:1px solid var(--gray-420);border-radius:2px;color:var(--ink);font-size:10px;font-weight:700;padding:2px 4px;box-shadow:none}
 .map-label:before{display:none}
 
