@@ -4,7 +4,7 @@ import path from "node:path";
 import { INITIAL_APARTMENTS } from "../js/data.js";
 
 const root = path.resolve(import.meta.dirname, "..");
-const required = ["index.html", "css/app.css", "js/app.js", "js/store.js", "js/firebase-adapter.js", "js/security.js", "data/demographics.js", "manifest.webmanifest", "sw.js", "firebase/firestore.rules", "docs/FIREBASE_SETUP.md"];
+const required = ["index.html", "css/app.css", "js/app.js", "js/store.js", "js/demo-data.js", "js/firebase-adapter.js", "js/security.js", "data/demographics.js", "manifest.webmanifest", "sw.js", "firebase/firestore.rules", "docs/FIREBASE_SETUP.md"];
 let failed = false;
 
 for (const file of required) {
@@ -21,7 +21,7 @@ for (const directory of ["js", "data", "scripts"]) {
 }
 
 const html = await readFile(path.join(root, "index.html"), "utf8");
-for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地図", "マンション", "分析", "設定・データ管理", "活動アカウント"]) {
+for (const label of ["ホーム", "活動を記録", "活動履歴", "配布地図", "マンション", "分析", "設定・データ管理", "活動アカウント", "デモ（見本データ）を作成"]) {
   if (!html.includes(label)) { console.error(`UI LABEL MISSING ${label}`); failed = true; }
 }
 if (html.includes("手動設定手順を見る")) { console.error("MANUAL FIREBASE SETUP LINK MUST NOT BE SHOWN"); failed = true; }
@@ -35,7 +35,7 @@ for (const feature of ["addCurrentLocationControl(activityMap)", "addCurrentLoca
 }
 
 const store = await readFile(path.join(root, "js/store.js"), "utf8");
-for (const feature of ["createAccount(name)", "switchAccount(id)", "renameAccount(id, name)", "deleteAccount(id)", "accountStates"]) {
+for (const feature of ["createAccount(name", "switchAccount(id)", "renameAccount(id, name)", "deleteAccount(id)", "accountStates"]) {
   if (!store.includes(feature)) { console.error(`ACTIVITY ACCOUNT FEATURE MISSING ${feature}`); failed = true; }
 }
 

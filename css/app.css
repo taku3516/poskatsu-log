@@ -707,3 +707,8 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* デモ（見本データ）の案内。活動アカウント一覧と区切って、通常の追加操作と混ざらないようにする */
+.demo-account { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
+.demo-account h4 { margin: 0 0 6px; font-size: 15px; }
+.demo-account p { margin-bottom: 12px; }

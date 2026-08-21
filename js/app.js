@@ -1,5 +1,6 @@
 import { store } from "./store.js";
 import { firebaseAdapter } from "./firebase-adapter.js";
+import { DEMO_ACCOUNT_NAME, createDemoState } from "./demo-data.js";
 import { DEMOGRAPHICS, DEMOGRAPHICS_AS_OF, DEMOGRAPHICS_SOURCE, TOWN_TOPOJSON_URL, BOUNDARY_CREDIT } from "./data.js";
 import { createImportedActivityIdentity, csvEscape, escapeHtml } from "./security.js";
 
@@ -746,6 +747,25 @@ function confirmImport() {
   pendingImport = []; $("#confirmImport").hidden = true; $("#importPreview").innerHTML = `<p>${saved}件を登録し、重複候補${duplicates}件をスキップしました。</p>`; toast("CSVの取り込みが完了しました");
 }
 
+// 見本データは今の台帳に混ぜず、専用の活動アカウントとして足す。
+// 混ぜないので、確かめ終わったらそのアカウントを消すだけで元に戻る
+function createDemoAccount() {
+  if (timerStarted) { alert("活動時間の計測中はデモを作成できません。"); return; }
+  const existing = store.findAccount((state) => state.isDemo);
+  if (existing && !confirm(`「${existing.name}」はすでにあります。作り直しますか？\n（今のデモの内容は失われます。ほかの活動アカウントは変わりません）`)) {
+    store.switchAccount(existing.id);
+    toast(`${existing.name}に切り替えました`);
+    return;
+  }
+  // 先に新しい方を作ってから古い方を消す（デモが唯一の活動アカウントでも削除でつまずかない）
+  store.createAccount(DEMO_ACCOUNT_NAME, createDemoState(new Date()));
+  if (existing) store.deleteAccount(existing.id);
+  resetActivityForm();
+  pendingImport = [];
+  toast("デモ（見本データ）を作成しました");
+  navigate("home");
+}
+
 function renderSettings() {
   $("#monthlyGoal").value = store.get().goals[monthKey()] || "";
   $("#materialMaster").innerHTML = store.get().materials.map((item) => `<div class="list-row"><span>${escapeHtml(item.name)}</span><button class="text-button" data-toggle-material="${escapeHtml(item.id)}" type="button">${item.active === false ? "表示する" : "非表示"}</button></div>`).join("");
@@ -802,6 +822,7 @@ function bindEvents() {
   $("#saveGoal").addEventListener("click", () => { store.saveGoal(monthKey(), $("#monthlyGoal").value); toast("月間目標を保存しました"); });
   $("#createMaterial").addEventListener("click", () => { const name = $("#newMaterialName").value.trim(); if (!name) return; store.saveMaterial({ id: uid("material"), name, active: true }); $("#newMaterialName").value = ""; });
   $("#accountSwitcher").addEventListener("change", (event) => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを切り替えられません。"); event.target.value = store.getActiveAccount().id; return; } store.switchAccount(event.target.value); resetActivityForm(); pendingImport = []; toast(`${store.getActiveAccount().name}に切り替えました`); });
+  $("#createDemoAccount").addEventListener("click", createDemoAccount);
   $("#createAccount").addEventListener("click", () => { if (timerStarted) { alert("活動時間の計測中は活動アカウントを追加できません。"); return; } try { store.createAccount($("#newAccountName").value); $("#newAccountName").value = ""; resetActivityForm(); pendingImport = []; toast("活動アカウントを追加しました"); } catch (error) { alert(error.message); } });
   $("#csvFile").addEventListener("change", (event) => { if (event.target.files[0]) previewCsv(event.target.files[0]); }); $("#confirmImport").addEventListener("click", confirmImport);
   // 画面回転やアドレスバーの開閉で地図のサイズがずれるため、変化後に再計算する
