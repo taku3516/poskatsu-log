@@ -112,13 +112,17 @@ export const store = {
     notify();
     if (!remote && remoteSave) remoteSave(structuredClone(container));
   },
-  createAccount(name) {
+  findAccount(predicate) {
+    const account = container.accounts.find((item) => predicate(container.accountStates[item.id], item));
+    return account ? structuredClone(account) : null;
+  },
+  createAccount(name, initialState = createInitialState()) {
     const cleanName = String(name || "").trim().slice(0, 60);
     if (!cleanName) throw new Error("活動アカウント名を入力してください。");
     const id = `account-${crypto.randomUUID()}`;
     const timestamp = now();
     container.accounts.push({ id, name: cleanName, createdAt: timestamp, updatedAt: timestamp });
-    container.accountStates[id] = createInitialState();
+    container.accountStates[id] = migrateState(structuredClone(initialState));
     container.activeAccountId = id;
     persist();
     return id;
