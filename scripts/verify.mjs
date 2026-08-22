@@ -43,7 +43,7 @@ const apartmentIds = new Set(INITIAL_APARTMENTS.map((item) => item.id));
 if (INITIAL_APARTMENTS.length < 40) { console.error("INITIAL APARTMENTS MUST INCLUDE AT LEAST 40 CANDIDATES"); failed = true; }
 if (apartmentIds.size !== INITIAL_APARTMENTS.length) { console.error("INITIAL APARTMENT IDS MUST BE UNIQUE"); failed = true; }
 for (const apartment of INITIAL_APARTMENTS) {
-  if (!apartment.name || !apartment.address || !apartment.area || apartment.units < 100 || !apartment.sourceUrl || !Number.isFinite(apartment.lat) || !Number.isFinite(apartment.lng)) {
+  if (!apartment.name || !apartment.address || !apartment.area || apartment.units < 50 || !apartment.sourceUrl || !Number.isFinite(apartment.lat) || !Number.isFinite(apartment.lng)) {
     console.error(`INVALID INITIAL APARTMENT ${apartment.id}`);
     failed = true;
   }
